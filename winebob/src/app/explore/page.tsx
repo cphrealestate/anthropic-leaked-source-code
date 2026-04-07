@@ -11,7 +11,7 @@ import type { MapLayer } from "@/components/shared/MapLayerDrawer";
 import { VintageWeatherLayer } from "@/components/layers/VintageWeatherLayer";
 import { FlavorGenomeLayer } from "@/components/layers/FlavorGenomeLayer";
 import { LiveHeatmapLayer } from "@/components/layers/LiveHeatmapLayer";
-import { DrawFlightLayer } from "@/components/layers/DrawFlightLayer";
+import DrawFlightLayer from "@/components/layers/DrawFlightLayer";
 import { useState, useRef } from "react";
 import mapboxgl from "mapbox-gl";
 
