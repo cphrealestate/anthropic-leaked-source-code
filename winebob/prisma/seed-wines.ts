@@ -1,7 +1,7 @@
 import { PrismaNeonHttp } from "@prisma/adapter-neon";
 import { PrismaClient } from "../src/generated/prisma/client";
 
-const adapter = new PrismaNeonHttp(process.env.DATABASE_URL!);
+const adapter = new PrismaNeonHttp(process.env.DATABASE_URL!, {});
 const prisma = new PrismaClient({ adapter } as any);
 
 type W = { name: string; producer: string; vintage: number | null; grapes: string[]; region: string; country: string; type: string; description: string; priceRange: string; isPublic: boolean };
