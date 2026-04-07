@@ -6,7 +6,7 @@ function createPrismaClient() {
   if (!dbUrl) {
     throw new Error("DATABASE_URL is not set");
   }
-  const adapter = new PrismaNeonHttp(dbUrl);
+  const adapter = new PrismaNeonHttp(dbUrl, {});
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return new PrismaClient({ adapter } as any);
 }
