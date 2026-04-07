@@ -67,6 +67,80 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
           { id: "labels-city", type: "symbol", source: "mapbox-streets", "source-layer": "place_label", filter: ["in", "class", "city"], layout: { "text-field": ["get", "name_en"], "text-size": ["interpolate", ["linear"], ["zoom"], 4, 9, 8, 13], "text-font": ["DIN Pro Regular", "Arial Unicode MS Regular"] }, paint: { "text-color": "#4A4030", "text-opacity": 0.5, "text-halo-color": "#110E0A", "text-halo-width": 1 } },
           // Place labels — towns (at higher zoom)
           { id: "labels-town", type: "symbol", source: "mapbox-streets", "source-layer": "place_label", filter: ["in", "class", "town", "village"], minzoom: 8, layout: { "text-field": ["get", "name_en"], "text-size": 10, "text-font": ["DIN Pro Regular", "Arial Unicode MS Regular"] }, paint: { "text-color": "#3A3428", "text-opacity": 0.4, "text-halo-color": "#110E0A", "text-halo-width": 1 } },
+
+          // ── POI: Wineries & wine bars (food_and_drink_stores, winery) ──
+          { id: "poi-winery", type: "circle", source: "mapbox-streets", "source-layer": "poi_label",
+            filter: ["any",
+              ["in", "maki", "wine-bar", "bar", "restaurant"],
+              ["in", "type", "Winery", "Wine Bar", "Vineyard"],
+              ["in", "class", "food_and_drink"],
+            ],
+            minzoom: 9,
+            paint: {
+              "circle-color": "#74070E",
+              "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, 2, 12, 4, 14, 6],
+              "circle-opacity": 0.7,
+              "circle-stroke-color": "#F0E8D8",
+              "circle-stroke-width": 0.5,
+              "circle-stroke-opacity": 0.3,
+            },
+          },
+          // POI labels for wineries
+          { id: "poi-winery-label", type: "symbol", source: "mapbox-streets", "source-layer": "poi_label",
+            filter: ["any",
+              ["in", "maki", "wine-bar", "bar", "restaurant"],
+              ["in", "type", "Winery", "Wine Bar", "Vineyard"],
+              ["in", "class", "food_and_drink"],
+            ],
+            minzoom: 12,
+            layout: {
+              "text-field": ["get", "name"],
+              "text-size": 10,
+              "text-font": ["DIN Pro Regular", "Arial Unicode MS Regular"],
+              "text-offset": [0, 1.2],
+              "text-anchor": "top",
+              "text-allow-overlap": false,
+            },
+            paint: {
+              "text-color": "#C8A080",
+              "text-opacity": 0.7,
+              "text-halo-color": "#110E0A",
+              "text-halo-width": 1,
+            },
+          },
+
+          // ── POI: Hotels & lodging ──
+          { id: "poi-hotel", type: "circle", source: "mapbox-streets", "source-layer": "poi_label",
+            filter: ["in", "class", "lodging"],
+            minzoom: 11,
+            paint: {
+              "circle-color": "#C8A255",
+              "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 2, 14, 5],
+              "circle-opacity": 0.5,
+              "circle-stroke-color": "#F0E8D8",
+              "circle-stroke-width": 0.5,
+              "circle-stroke-opacity": 0.2,
+            },
+          },
+          // Hotel labels
+          { id: "poi-hotel-label", type: "symbol", source: "mapbox-streets", "source-layer": "poi_label",
+            filter: ["in", "class", "lodging"],
+            minzoom: 13,
+            layout: {
+              "text-field": ["get", "name"],
+              "text-size": 9,
+              "text-font": ["DIN Pro Regular", "Arial Unicode MS Regular"],
+              "text-offset": [0, 1.2],
+              "text-anchor": "top",
+              "text-allow-overlap": false,
+            },
+            paint: {
+              "text-color": "#A08850",
+              "text-opacity": 0.5,
+              "text-halo-color": "#110E0A",
+              "text-halo-width": 1,
+            },
+          },
         ],
       } as mapboxgl.StyleSpecification,
       center: [12, 44],
@@ -181,6 +255,40 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
         const props = e.features[0].properties;
         if (props) handleRegionClick(props.name, props.country);
       });
+
+      // ── POI interactions ──
+      const poiLayers = ["poi-winery", "poi-hotel"];
+
+      for (const layerId of poiLayers) {
+        map.current.on("mouseenter", layerId, () => {
+          if (map.current) map.current.getCanvas().style.cursor = "pointer";
+        });
+        map.current.on("mouseleave", layerId, () => {
+          if (map.current) map.current.getCanvas().style.cursor = "";
+          popup.current?.remove();
+        });
+
+        map.current.on("click", layerId, (e) => {
+          if (!map.current || !e.features?.length) return;
+          const p = e.features[0].properties as Record<string, string>;
+          const name = p?.name ?? "Unknown";
+          const cat = p?.category_en ?? p?.type ?? p?.class ?? "";
+          const isWine = layerId === "poi-winery";
+
+          popup.current
+            ?.setLngLat(e.lngLat)
+            .setHTML(`
+              <div style="font-family:system-ui,sans-serif">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+                  <span style="font-size:14px">${isWine ? "🍷" : "🏨"}</span>
+                  <p style="font-size:13px;font-weight:700;color:#F0E8D8;margin:0">${name}</p>
+                </div>
+                <p style="font-size:10px;color:#8A7E6A;margin:0">${cat}</p>
+              </div>
+            `)
+            .addTo(map.current!);
+        });
+      }
     });
 
     return () => { popup.current?.remove(); map.current?.remove(); };
