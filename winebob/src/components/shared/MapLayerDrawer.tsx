@@ -95,7 +95,7 @@ export function MapLayerDrawer({ layers, onToggle, className = "" }: Props) {
   return (
     <div
       ref={panelRef}
-      className={`fixed bottom-24 right-4 md:bottom-auto md:top-1/2 md:right-5 md:-translate-y-1/2 z-40 ${className}`}
+      className={`absolute bottom-24 right-3 md:bottom-auto md:top-1/2 md:right-5 md:-translate-y-1/2 z-30 pointer-events-none ${className}`}
     >
       {/* Panel */}
       <div
@@ -104,9 +104,9 @@ export function MapLayerDrawer({ layers, onToggle, className = "" }: Props) {
           transition-all duration-300 ease-out
           ${open ? "opacity-100 scale-100 pointer-events-auto" : "opacity-0 scale-95 pointer-events-none"}
         `}
-        style={{ width: 280 }}
+        style={{ width: 260 }}
       >
-        <div className="rounded-[14px] bg-[#1A1412]/85 backdrop-blur-xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden">
+        <div className="rounded-[14px] bg-[#1A1412]/85 backdrop-blur-xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden pointer-events-auto">
           {/* Panel header */}
           <div className="flex items-center justify-between px-4 pt-3.5 pb-2 border-b border-white/[0.06]">
             <p
@@ -178,7 +178,7 @@ export function MapLayerDrawer({ layers, onToggle, className = "" }: Props) {
       <button
         onClick={() => setOpen((v) => !v)}
         className={`
-          mt-3 ml-auto flex items-center justify-center
+          mt-3 ml-auto flex items-center justify-center pointer-events-auto
           w-[44px] h-[44px] rounded-full
           bg-[#1A1412]/85 backdrop-blur-xl border border-white/[0.08]
           shadow-[0_4px_16px_rgba(0,0,0,0.3)]

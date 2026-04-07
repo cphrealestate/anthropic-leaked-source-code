@@ -15,6 +15,9 @@ import { TourInfoCard } from "@/components/shared/TourInfoCard";
 import { useMapLayers } from "@/hooks/useMapLayers";
 import { MapLayerDrawer } from "@/components/shared/MapLayerDrawer";
 import type { MapLayer } from "@/components/shared/MapLayerDrawer";
+import { VintageWeatherLayer } from "@/components/layers/VintageWeatherLayer";
+import { FlavorGenomeLayer } from "@/components/layers/FlavorGenomeLayer";
+import mapboxgl from "mapbox-gl";
 
 /* ── Types ── */
 
@@ -78,7 +81,8 @@ export function WinesClient({
   activeType, activeCountry, activePriceRange, activeSearch,
 }: Props) {
   const router = useRouter();
-  const { layers, toggle } = useMapLayers();
+  const { layers, toggle, isActive } = useMapLayers();
+  const mapRef = useRef<mapboxgl.Map | null>(null);
   const fullLayers: MapLayer[] = layers.map((l) => ({ ...l, icon: LAYER_ICONS[l.id] ?? null }));
   const [search, setSearch] = useState(activeSearch ?? "");
   const [favSet, setFavSet] = useState<Set<string>>(new Set());
@@ -253,10 +257,23 @@ export function WinesClient({
     <div className="fixed inset-0">
       {/* ═══ SINGLE MAP — shared between desktop & mobile ═══ */}
       <div className="absolute inset-0">
-        <WineRegionMap onRegionClick={onRegionClick} regionCounts={regionCounts} exploreRegion={exploreRegion} flyToCoords={flyToCoords} tourRegion={tourRegion} onTourEnd={() => { setTourRegion(null); setActiveTourStop(null); }} satellite={satellite} onTourStop={setActiveTourStop} height="100%" />
+        <WineRegionMap onRegionClick={onRegionClick} regionCounts={regionCounts} exploreRegion={exploreRegion} flyToCoords={flyToCoords} tourRegion={tourRegion} onTourEnd={() => { setTourRegion(null); setActiveTourStop(null); }} satellite={satellite} onTourStop={setActiveTourStop} height="100%" mapRef={mapRef} />
       </div>
 
       <MapLayerDrawer layers={fullLayers} onToggle={toggle} />
+
+      {/* Vintage Weather Replay layer */}
+      <VintageWeatherLayer
+        active={isActive("vintage-weather")}
+        mapRef={mapRef}
+        region={exploreRegion}
+      />
+
+      {/* Flavor Genome Map layer */}
+      <FlavorGenomeLayer
+        active={isActive("flavor-genome")}
+        mapRef={mapRef}
+      />
 
       {/* Tour info card — floating overlay */}
       {activeTourStop && tourRegion && (
