@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { Sparkles, Wine, Users, Globe, ArrowRight, Lock, Play, Square, Satellite, Map } from "lucide-react";
 import { WineRegionMap, getRegionCities } from "@/components/shared/WineRegionMap";
+import type { TourStop } from "@/components/shared/WineRegionMap";
+import { TourInfoCard } from "@/components/shared/TourInfoCard";
 import { useState } from "react";
 
 export default function ExplorePage() {
@@ -11,6 +13,7 @@ export default function ExplorePage() {
   const [activeCity, setActiveCity] = useState<string | null>(null);
   const [tourRegion, setTourRegion] = useState<string | null>(null);
   const [satellite, setSatellite] = useState(false);
+  const [activeTourStop, setActiveTourStop] = useState<TourStop | null>(null);
 
   function handleCityClick(city: { name: string; coords: [number, number] }) {
     setTourRegion(null); // stop any tour
@@ -49,8 +52,9 @@ export default function ExplorePage() {
           exploreRegion={selectedRegion}
           flyToCoords={flyToCoords}
           tourRegion={tourRegion}
-          onTourEnd={() => setTourRegion(null)}
+          onTourEnd={() => { setTourRegion(null); setActiveTourStop(null); }}
           satellite={satellite}
+          onTourStop={setActiveTourStop}
           height="100%"
         />
       </div>
@@ -125,6 +129,13 @@ export default function ExplorePage() {
           >
             ← World view
           </button>
+        </div>
+      )}
+
+      {/* Tour info card — floating overlay */}
+      {activeTourStop && tourRegion && (
+        <div className="absolute bottom-[260px] left-4 z-20">
+          <TourInfoCard stop={activeTourStop} region={selectedRegion ?? undefined} />
         </div>
       )}
 

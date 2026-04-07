@@ -189,6 +189,8 @@ type WineRegionMapProps = {
   onTourEnd?: () => void;
   /** Toggle satellite imagery view */
   satellite?: boolean;
+  /** Called with current tour stop info (null = in-flight between stops) */
+  onTourStop?: (stop: TourStop | null) => void;
 };
 
 const STYLE_STANDARD = "mapbox://styles/mapbox/standard";
@@ -213,7 +215,7 @@ const REGION_CITIES: Record<string, [number, number]> = {
   "Marlborough": [173.95, -41.51], "Stellenbosch": [18.86, -33.93],
 };
 
-export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", className = "", exploreRegion, flyToCoords, tourRegion, onTourEnd, satellite = false }: WineRegionMapProps) {
+export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", className = "", exploreRegion, flyToCoords, tourRegion, onTourEnd, satellite = false, onTourStop }: WineRegionMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const popup = useRef<mapboxgl.Popup | null>(null);
@@ -229,6 +231,8 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
   regionCountsRef.current = regionCounts;
   const onTourEndRef = useRef(onTourEnd);
   onTourEndRef.current = onTourEnd;
+  const onTourStopRef = useRef(onTourStop);
+  onTourStopRef.current = onTourStop;
 
   // City hopping — only flyTo, don't touch region visibility
   useEffect(() => {
@@ -244,31 +248,39 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
 
     // Zoom out to overview first
     const regionCenter = REGION_CITIES[regionName] ?? cities[0].coords;
-    await flyAndWait(map.current, { center: regionCenter, zoom: 10, pitch: 60, bearing: -20, duration: 2000 }, signal);
+    onTourStopRef.current?.(null); // in-flight
+    await flyAndWait(map.current, { center: regionCenter, zoom: 10, pitch: 60, bearing: -20, duration: 2500 }, signal);
 
     // Sweep through each sub-city
     for (let i = 0; i < cities.length; i++) {
-      if (signal.aborted) return;
+      if (signal.aborted) break;
       const city = cities[i];
       const bearing = -20 + (i * 40); // Rotate camera as we hop
+      onTourStopRef.current?.(null); // in-flight
       await flyAndWait(map.current!, {
         center: city.coords,
         zoom: 14,
         pitch: 60,
         bearing,
-        duration: 2500,
+        duration: 3500,
         essential: true,
       }, signal);
-      if (signal.aborted) return;
-      // Pause at each city
-      await delay(1500, signal);
+      if (signal.aborted) break;
+      // Show info card after camera settles
+      onTourStopRef.current?.(city);
+      // Dwell — enough time to read the card
+      await delay(5500, signal);
     }
+
+    // Clear card before returning to overview
+    onTourStopRef.current?.(null);
 
     // Return to region overview
     if (!signal.aborted && map.current) {
-      await flyAndWait(map.current, { center: regionCenter, zoom: 11, pitch: 45, bearing: 0, duration: 2000 }, signal);
+      await flyAndWait(map.current, { center: regionCenter, zoom: 11, pitch: 45, bearing: 0, duration: 2500 }, signal);
     }
 
+    onTourStopRef.current?.(null);
     onTourEndRef.current?.();
   }, []);
 

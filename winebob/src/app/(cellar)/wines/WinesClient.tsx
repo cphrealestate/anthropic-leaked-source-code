@@ -9,6 +9,8 @@ import {
 import { useState, useTransition, useRef, useCallback } from "react";
 import { toggleFavorite } from "@/lib/actions";
 import { WineRegionMap, getRegionCities } from "@/components/shared/WineRegionMap";
+import type { TourStop } from "@/components/shared/WineRegionMap";
+import { TourInfoCard } from "@/components/shared/TourInfoCard";
 
 /* ── Types ── */
 
@@ -73,6 +75,7 @@ export function WinesClient({
   const [tourRegion, setTourRegion] = useState<string | null>(null);
   const [satellite, setSatellite] = useState(false);
   const [activeCity, setActiveCity] = useState<string | null>(null);
+  const [activeTourStop, setActiveTourStop] = useState<TourStop | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [, startTransition] = useTransition();
 
@@ -237,8 +240,22 @@ export function WinesClient({
     <div className="fixed inset-0">
       {/* ═══ SINGLE MAP — shared between desktop & mobile ═══ */}
       <div className="absolute inset-0">
-        <WineRegionMap onRegionClick={onRegionClick} regionCounts={regionCounts} exploreRegion={exploreRegion} flyToCoords={flyToCoords} tourRegion={tourRegion} onTourEnd={() => setTourRegion(null)} satellite={satellite} height="100%" />
+        <WineRegionMap onRegionClick={onRegionClick} regionCounts={regionCounts} exploreRegion={exploreRegion} flyToCoords={flyToCoords} tourRegion={tourRegion} onTourEnd={() => { setTourRegion(null); setActiveTourStop(null); }} satellite={satellite} onTourStop={setActiveTourStop} height="100%" />
       </div>
+
+      {/* Tour info card — floating overlay */}
+      {activeTourStop && tourRegion && (
+        <>
+          {/* Desktop: bottom-left above filter bar */}
+          <div className="hidden lg:block absolute bottom-16 left-4 z-20">
+            <TourInfoCard stop={activeTourStop} region={exploreRegion ?? undefined} />
+          </div>
+          {/* Mobile: above bottom sheet */}
+          <div className="lg:hidden absolute bottom-16 left-3 z-20">
+            <TourInfoCard stop={activeTourStop} region={exploreRegion ?? undefined} />
+          </div>
+        </>
+      )}
 
       {/* ═══ DESKTOP (lg+) overlays ═══ */}
       {/* Search overlay */}
