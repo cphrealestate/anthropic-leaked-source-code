@@ -1,9 +1,15 @@
 "use server";
 
 import { prisma } from "@/lib/db";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import {
+  trackWineSearch,
+  trackWineView,
+  trackWineFavorite,
+  trackEvent,
+} from "@/lib/analytics";
 
 // ============ JOIN CODE GENERATION ============
 
@@ -451,7 +457,7 @@ export async function getTemplates() {
 export async function searchWines(query: string) {
   if (!query || query.trim().length < 2) return [];
 
-  return prisma.wine.findMany({
+  const results = await prisma.wine.findMany({
     where: {
       OR: [
         { name: { contains: query, mode: "insensitive" } },
@@ -462,6 +468,12 @@ export async function searchWines(query: string) {
     },
     take: 20,
   });
+
+  // Fire-and-forget: track search after results are ready
+  const session = await auth().catch(() => null);
+  trackWineSearch(session?.user?.id ?? null, query, results.length);
+
+  return results;
 }
 
 export async function getWineRegionCounts(): Promise<Record<string, number>> {
@@ -522,7 +534,15 @@ export async function getWineLibrary(filters?: {
 }
 
 export async function getWineById(id: string) {
-  return prisma.wine.findUnique({ where: { id } });
+  const wine = await prisma.wine.findUnique({ where: { id } });
+
+  if (wine) {
+    // Fire-and-forget: track view after data is fetched
+    const session = await auth().catch(() => null);
+    trackWineView(session?.user?.id ?? null, id, "detail");
+  }
+
+  return wine;
 }
 
 export async function getWineCountries() {
@@ -553,7 +573,7 @@ export async function addWine(data: {
 }) {
   const session = await requireAuth();
 
-  return prisma.wine.create({
+  const wine = await prisma.wine.create({
     data: {
       ...data,
       vintage: data.vintage ?? null,
@@ -561,6 +581,16 @@ export async function addWine(data: {
       isPublic: true,
     },
   });
+
+  // Fire-and-forget: track wine addition
+  trackEvent({
+    eventType: "wine_add",
+    userId: session.user.id,
+    wineId: wine.id,
+    metadata: { producer: data.producer, region: data.region, country: data.country },
+  });
+
+  return wine;
 }
 
 export async function toggleFavorite(wineId: string) {
@@ -578,6 +608,10 @@ export async function toggleFavorite(wineId: string) {
   await prisma.wineFavorite.create({
     data: { userId: session.user.id, wineId },
   });
+
+  // Fire-and-forget: track favorite after successful toggle
+  trackWineFavorite(session.user.id, wineId);
+
   return { favorited: true };
 }
 
