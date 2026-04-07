@@ -91,7 +91,6 @@ export function WinesClient({
     // Only fly to — don't navigate (that causes remount and kills the animation)
     setExploreRegion(region);
     setSearch(region);
-    setSheet("half");
   }
 
   // Navigate when user explicitly confirms explore (e.g. from sheet header)
