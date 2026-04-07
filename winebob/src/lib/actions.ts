@@ -54,14 +54,23 @@ export async function createEvent(data: {
       difficulty: data.difficulty,
       timePerWine: data.timePerWine,
       status: "draft",
-      wines: {
-        create: data.wineIds.map((wineId, i) => ({
-          wineId,
-          position: i + 1,
-        })),
-      },
     },
   });
+
+  // Add wines separately (Neon HTTP adapter doesn't support nested creates / implicit transactions)
+  if (data.wineIds.length > 0) {
+    await Promise.all(
+      data.wineIds.map((wineId, i) =>
+        prisma.blindWine.create({
+          data: {
+            eventId: event.id,
+            wineId,
+            position: i + 1,
+          },
+        })
+      )
+    );
+  }
 
   // Increment template usage count
   if (data.templateId) {
@@ -357,6 +366,13 @@ export async function searchWines(query: string) {
       ],
     },
     take: 20,
+  });
+}
+
+export async function getBrowseWines() {
+  return prisma.wine.findMany({
+    take: 30,
+    orderBy: { name: "asc" },
   });
 }
 
