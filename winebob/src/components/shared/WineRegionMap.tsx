@@ -65,7 +65,6 @@ const REGION_SUB_CITIES: Record<string, { name: string; coords: [number, number]
 
 type WineRegionMapProps = {
   onRegionClick?: (region: string, country: string) => void;
-  onCityClick?: (city: string, coords: [number, number]) => void;
   regionCounts?: Record<string, number>;
   height?: string;
   className?: string;
@@ -79,7 +78,7 @@ export function getRegionCities(region: string) {
   return REGION_SUB_CITIES[region] ?? [];
 }
 
-export function WineRegionMap({ onRegionClick, onCityClick, regionCounts, height = "100%", className = "", exploreRegion, flyToCoords }: WineRegionMapProps) {
+export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", className = "", exploreRegion, flyToCoords }: WineRegionMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const popup = useRef<mapboxgl.Popup | null>(null);

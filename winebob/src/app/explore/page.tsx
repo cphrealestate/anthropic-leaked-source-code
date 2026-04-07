@@ -7,14 +7,34 @@ import { useState } from "react";
 
 export default function ExplorePage() {
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
+  const [flyToCoords, setFlyToCoords] = useState<[number, number] | null>(null);
+  const [activeCity, setActiveCity] = useState<string | null>(null);
+
+  function handleCityClick(city: { name: string; coords: [number, number] }) {
+    setFlyToCoords(city.coords);
+    setActiveCity(city.name);
+  }
+
+  function handleRegionClick(region: string) {
+    setSelectedRegion(region);
+    setActiveCity(null);
+    setFlyToCoords(null);
+  }
+
+  function handleWorldView() {
+    setSelectedRegion(null);
+    setActiveCity(null);
+    setFlyToCoords(null);
+  }
 
   return (
     <div className="fixed inset-0">
       {/* Map — fullscreen preview */}
       <div className="absolute inset-0">
         <WineRegionMap
-          onRegionClick={(region) => setSelectedRegion(region)}
+          onRegionClick={handleRegionClick}
           exploreRegion={selectedRegion}
+          flyToCoords={flyToCoords}
           height="100%"
         />
       </div>
@@ -52,7 +72,12 @@ export default function ExplorePage() {
               {getRegionCities(selectedRegion).map((city) => (
                 <button
                   key={city.name}
-                  className="px-2.5 py-1.5 rounded-[8px] bg-[#1A1412]/70 backdrop-blur-xl border border-white/[0.08] text-[11px] font-semibold text-white/70 text-left active:bg-cherry active:text-white transition-colors"
+                  onClick={() => handleCityClick(city)}
+                  className={`px-2.5 py-1.5 rounded-[8px] backdrop-blur-xl border text-[11px] font-semibold text-left transition-colors ${
+                    activeCity === city.name
+                      ? "bg-cherry border-cherry/60 text-white"
+                      : "bg-[#1A1412]/70 border-white/[0.08] text-white/70 active:bg-cherry active:text-white"
+                  }`}
                 >
                   {city.name} →
                 </button>
@@ -60,7 +85,7 @@ export default function ExplorePage() {
             </div>
           )}
           <button
-            onClick={() => setSelectedRegion(null)}
+            onClick={handleWorldView}
             className="mt-2 px-2.5 py-1.5 rounded-[8px] bg-[#1A1412]/60 backdrop-blur-xl border border-white/[0.06] text-[11px] font-semibold text-white/50 active:scale-95 transition-transform"
           >
             ← World view
