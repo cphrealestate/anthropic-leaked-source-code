@@ -82,7 +82,7 @@ model Wine {
   isPublic    Boolean  @default(true)  // visible in public wine library
   addedById   String?  // null = system-curated, userId = host-contributed
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  updatedAt   DateTime @default(now()) @updatedAt
 
   blindWines  BlindWine[]
   favorites   WineFavorite[]
