@@ -119,7 +119,7 @@ export default function ExplorePage() {
 
             <div className="flex flex-col gap-2.5 max-w-[300px] mx-auto">
               <Link
-                href="/login"
+                href="/login?callbackUrl=/wines"
                 className="flex items-center justify-center gap-2 h-12 rounded-[12px] bg-white text-cherry font-bold text-[15px] active:scale-[0.98] transition-transform"
                 style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.2)" }}
               >
@@ -127,7 +127,7 @@ export default function ExplorePage() {
                 Sign up free
               </Link>
               <Link
-                href="/login"
+                href="/login?callbackUrl=/wines"
                 className="flex items-center justify-center gap-2 h-11 rounded-[12px] bg-white/10 border border-white/10 text-white/70 font-semibold text-[13px] active:scale-[0.98] transition-transform"
               >
                 Already have an account? Log in
