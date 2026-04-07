@@ -415,7 +415,7 @@ export function WineRegionMap({ onRegionClick, onCityClick, regionCounts, height
   }
 
   // Explore region: fly + hide polygons. Separate from flyToCoords.
-  const prevExploreRef = useRef<string | null>(null);
+  const prevExploreRef = useRef<string | null | undefined>(null);
   useEffect(() => {
     if (!map.current || !mapLoaded.current) return;
     // Skip if same region (prevents re-triggering)
