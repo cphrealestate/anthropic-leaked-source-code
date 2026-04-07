@@ -19,7 +19,7 @@ import {
   Sparkles,
   GlassWater,
 } from "lucide-react";
-import { createEvent, getTemplates, searchWines } from "@/lib/actions";
+import { createEvent, getTemplates, searchWines, getBrowseWines } from "@/lib/actions";
 
 // ============ TYPES ============
 
@@ -108,6 +108,9 @@ function CreateEventInner() {
   const [searchResults, setSearchResults] = useState<WineResult[]>([]);
   const [searching, setSearching] = useState(false);
   const [selectedWines, setSelectedWines] = useState<WineResult[]>([]);
+  const [browseWines, setBrowseWines] = useState<WineResult[]>([]);
+  const [browseLoaded, setBrowseLoaded] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<string | null>(null);
 
   // Step 4 state
   const [isPending, startTransition] = useTransition();
@@ -128,6 +131,17 @@ function CreateEventInner() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ============ LOAD BROWSE WINES (on step 3 entry) ============
+
+  useEffect(() => {
+    if (step === 3 && !browseLoaded) {
+      getBrowseWines().then((data) => {
+        setBrowseWines(data as WineResult[]);
+        setBrowseLoaded(true);
+      });
+    }
+  }, [step, browseLoaded]);
 
   // ============ TEMPLATE HELPERS ============
 
@@ -550,18 +564,41 @@ function CreateEventInner() {
 
   // ============ STEP 3: ADD WINES ============
 
+  const WINE_TYPE_FILTERS = [
+    { value: null, label: "All", emoji: "🍷" },
+    { value: "red", label: "Red", emoji: "🔴" },
+    { value: "white", label: "White", emoji: "⚪" },
+    { value: "rosé", label: "Rosé", emoji: "🩷" },
+    { value: "sparkling", label: "Sparkling", emoji: "✨" },
+    { value: "orange", label: "Orange", emoji: "🟠" },
+  ];
+
+  // Wine list to display: search results take priority, then browse wines
+  const displayWines = searchQuery.trim().length >= 2
+    ? searchResults
+    : browseWines.filter((w) => !typeFilter || w.type.toLowerCase() === typeFilter);
+
   function renderStep3() {
     return (
       <div className="animate-fade-in-up">
-        <h1 className="text-[28px] font-bold text-foreground tracking-tight mb-1">
-          Add Wines
-        </h1>
-        <p className="text-muted text-[15px] mb-6">
-          Search and add wines for your flight.
+        {/* Selected wines count badge in header */}
+        <div className="flex items-start justify-between mb-1">
+          <h1 className="text-[28px] font-bold text-foreground tracking-tight">
+            Add Wines
+          </h1>
+          {selectedWines.length > 0 && (
+            <span className="mt-1.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cherry text-white text-[12px] font-bold">
+              <Wine className="h-3 w-3" />
+              {selectedWines.length} selected
+            </span>
+          )}
+        </div>
+        <p className="text-muted text-[15px] mb-5">
+          Tap to add wines to your flight.
         </p>
 
         {/* Search */}
-        <div className="relative mb-6">
+        <div className="relative mb-4">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted/50 pointer-events-none" />
           <input
             type="text"
@@ -577,36 +614,76 @@ function CreateEventInner() {
           )}
         </div>
 
-        {/* Search Results */}
-        {searchResults.length > 0 && (
-          <div className="mb-6 max-h-72 overflow-y-auto rounded-2xl border border-card-border bg-card-bg">
-            {searchResults.map((wine, i) => {
+        {/* Type filter chips (only show when browsing, not searching) */}
+        {searchQuery.trim().length < 2 && (
+          <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-hide mb-2">
+            {WINE_TYPE_FILTERS.map((f) => (
+              <button
+                key={f.label}
+                onClick={() => setTypeFilter(f.value)}
+                className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[13px] font-medium transition-all ${
+                  typeFilter === f.value
+                    ? "bg-cherry text-white shadow-sm"
+                    : "bg-card-bg border border-card-border text-foreground"
+                }`}
+              >
+                <span className="text-[14px]">{f.emoji}</span>
+                {f.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Wine list */}
+        {!browseLoaded && searchQuery.trim().length < 2 ? (
+          <div className="flex justify-center py-12">
+            <div className="h-6 w-6 rounded-full border-2 border-cherry border-t-transparent animate-spin" />
+          </div>
+        ) : displayWines.length === 0 ? (
+          <div className="wine-card flex flex-col items-center justify-center py-10 px-6 text-center mb-4">
+            <p className="text-[14px] text-muted">
+              {searchQuery.trim().length >= 2 ? "No wines found" : "No wines in this category"}
+            </p>
+          </div>
+        ) : (
+          <div className="wine-card divide-y divide-card-border/40 mb-4 max-h-[340px] overflow-y-auto">
+            {displayWines.map((wine) => {
               const alreadyAdded = selectedWines.some((w) => w.id === wine.id);
+              const typeColor =
+                wine.type.toLowerCase() === "red" ? "bg-red-500" :
+                wine.type.toLowerCase() === "white" ? "bg-amber-200" :
+                wine.type.toLowerCase() === "rosé" ? "bg-pink-300" :
+                wine.type.toLowerCase() === "sparkling" ? "bg-yellow-300" :
+                wine.type.toLowerCase() === "orange" ? "bg-orange-300" : "bg-gray-300";
+
               return (
                 <button
                   key={wine.id}
-                  onClick={() => addWine(wine)}
-                  disabled={alreadyAdded}
-                  className={`touch-target w-full text-left px-4 py-3.5 flex items-center gap-3 transition-all ${
-                    i > 0 ? "border-t border-card-border/40" : ""
-                  } ${alreadyAdded ? "opacity-40" : "active:bg-widget-wine/30"}`}
+                  onClick={() => alreadyAdded ? removeWine(wine.id) : addWine(wine)}
+                  className={`touch-target w-full text-left px-4 py-3 flex items-center gap-3 transition-all ${
+                    alreadyAdded ? "bg-widget-wine/40" : "active:bg-widget-wine/20"
+                  }`}
                 >
+                  {/* Wine type dot */}
+                  <div className={`h-3 w-3 rounded-full ${typeColor} flex-shrink-0`} />
+
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-[14px] text-foreground line-clamp-1">
+                    <p className={`font-semibold text-[14px] leading-tight line-clamp-1 ${alreadyAdded ? "text-cherry" : "text-foreground"}`}>
                       {wine.name}
                     </p>
-                    <p className="text-[12px] text-muted mt-0.5">
-                      {wine.producer} · {wine.region} · {wine.type}
+                    <p className="text-[11px] text-muted mt-0.5 line-clamp-1">
+                      {wine.producer} · {wine.region}
                       {wine.vintage ? ` · ${wine.vintage}` : ""}
                     </p>
                   </div>
+
                   {alreadyAdded ? (
-                    <div className="h-7 w-7 rounded-full bg-cherry/10 flex items-center justify-center flex-shrink-0">
-                      <Check className="h-3.5 w-3.5 text-cherry" strokeWidth={3} />
+                    <div className="h-7 w-7 rounded-full bg-cherry flex items-center justify-center flex-shrink-0">
+                      <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />
                     </div>
                   ) : (
-                    <div className="h-7 w-7 rounded-full bg-cherry/8 flex items-center justify-center flex-shrink-0">
-                      <Plus className="h-4 w-4 text-cherry" />
+                    <div className="h-7 w-7 rounded-full bg-card-border/30 flex items-center justify-center flex-shrink-0">
+                      <Plus className="h-4 w-4 text-muted" />
                     </div>
                   )}
                 </button>
@@ -615,32 +692,25 @@ function CreateEventInner() {
           </div>
         )}
 
-        {/* Selected Wines */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[13px] font-bold text-foreground uppercase tracking-wide">
-              Flight Order
-            </h2>
-            <span className="text-[12px] font-semibold text-muted">
-              {selectedWines.length} wine{selectedWines.length !== 1 ? "s" : ""}
-            </span>
-          </div>
-
-          {selectedWines.length === 0 ? (
-            <div className="wine-card flex flex-col items-center justify-center py-14 px-6 text-center">
-              <div className="h-14 w-14 rounded-2xl widget-gold flex items-center justify-center mb-3">
-                <Wine className="h-6 w-6 text-amber-600/40" />
-              </div>
-              <p className="text-[14px] font-semibold text-muted">
-                Search above to add wines
-              </p>
+        {/* Selected wines — Flight Order */}
+        {selectedWines.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-3 mt-2">
+              <h2 className="text-[13px] font-bold text-foreground uppercase tracking-wide">
+                Flight Order
+              </h2>
+              <button
+                onClick={() => setSelectedWines([])}
+                className="text-[11px] font-semibold text-cherry active:opacity-70"
+              >
+                Clear all
+              </button>
             </div>
-          ) : (
             <div className="space-y-2">
               {selectedWines.map((wine, idx) => (
                 <div
                   key={wine.id}
-                  className="wine-card flex items-center gap-3 p-3.5"
+                  className="wine-card flex items-center gap-3 p-3.5 animate-scale-in"
                 >
                   <span className="flex h-9 w-9 items-center justify-center rounded-xl widget-wine text-[13px] font-bold text-cherry flex-shrink-0">
                     {idx + 1}
@@ -663,8 +733,8 @@ function CreateEventInner() {
                 </div>
               ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     );
   }
