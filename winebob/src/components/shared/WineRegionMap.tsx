@@ -84,6 +84,7 @@ export function WineRegionMap({ onRegionClick, onCityClick, regionCounts, height
   const map = useRef<mapboxgl.Map | null>(null);
   const popup = useRef<mapboxgl.Popup | null>(null);
   const mapLoaded = useRef(false);
+  const exploreRegionRef = useRef(exploreRegion);
 
   // City hopping — only flyTo, don't touch region visibility
   useEffect(() => {
@@ -243,7 +244,7 @@ export function WineRegionMap({ onRegionClick, onCityClick, regionCounts, height
 
     popup.current = new mapboxgl.Popup({
       closeButton: false,
-      closeOnClick: false,
+      closeOnClick: true,
       offset: 8,
       className: "wb-popup",
     });
@@ -306,6 +307,11 @@ export function WineRegionMap({ onRegionClick, onCityClick, regionCounts, height
         },
       });
 
+      // If already exploring a region when map (re-)initializes, hide regions
+      if (exploreRegionRef.current) {
+        setRegionVisibility(false);
+      }
+
       let hoveredId: string | number | null = null;
 
       map.current.on("mousemove", "wine-regions-fill", (e) => {
@@ -353,7 +359,13 @@ export function WineRegionMap({ onRegionClick, onCityClick, regionCounts, height
       });
 
       // ── POI interactions ──
-      const poiLayers = ["poi-winery", "poi-hotel"];
+      const poiLayers = ["poi-food", "poi-hotel", "poi-shops"];
+
+      const poiMeta: Record<string, { icon: string; label: string; accent: string }> = {
+        "poi-food":  { icon: "🍽️", label: "Restaurant", accent: "#74070E" },
+        "poi-hotel": { icon: "🏨", label: "Hotel",      accent: "#C8A255" },
+        "poi-shops": { icon: "🍷", label: "Wine Shop",  accent: "#8B5A4A" },
+      };
 
       for (const layerId of poiLayers) {
         map.current.on("mouseenter", layerId, () => {
@@ -369,17 +381,21 @@ export function WineRegionMap({ onRegionClick, onCityClick, regionCounts, height
           const p = e.features[0].properties as Record<string, string>;
           const name = p?.name ?? "Unknown";
           const cat = p?.category_en ?? p?.type ?? p?.class ?? "";
-          const isWine = layerId === "poi-winery";
+          const meta = poiMeta[layerId];
+          const address = p?.address ?? "";
 
           popup.current
             ?.setLngLat(e.lngLat)
             .setHTML(`
-              <div style="font-family:system-ui,sans-serif">
-                <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
-                  <span style="font-size:14px">${isWine ? "🍷" : "🏨"}</span>
-                  <p style="font-size:13px;font-weight:700;color:#1A1412;margin:0">${name}</p>
+              <div style="font-family:system-ui,sans-serif;min-width:160px">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+                  <span style="font-size:16px">${meta.icon}</span>
+                  <div>
+                    <p style="font-size:13px;font-weight:700;color:#1A1412;margin:0">${name}</p>
+                    <p style="font-size:10px;color:${meta.accent};font-weight:600;margin:1px 0 0">${cat || meta.label}</p>
+                  </div>
                 </div>
-                <p style="font-size:10px;color:#8C7E6E;margin:0">${cat}</p>
+                ${address ? `<p style="font-size:10px;color:#8C7E6E;margin:4px 0 0;border-top:1px solid #F0E8D8;padding-top:4px">${address}</p>` : ""}
               </div>
             `)
             .addTo(map.current!);
@@ -409,13 +425,16 @@ export function WineRegionMap({ onRegionClick, onCityClick, regionCounts, height
     if (!map.current || !mapLoaded.current) return;
     try {
       map.current.setPaintProperty("wine-regions-fill", "fill-opacity", visible ? ["case", ["boolean", ["feature-state", "hover"], false], 0.45, 0.2] : 0);
+      map.current.setLayoutProperty("wine-regions-fill", "visibility", visible ? "visible" : "none");
       map.current.setPaintProperty("wine-regions-border", "line-opacity", visible ? 0.6 : 0);
+      map.current.setLayoutProperty("wine-regions-border", "visibility", visible ? "visible" : "none");
       map.current.setLayoutProperty("wine-regions-label", "visibility", visible ? "visible" : "none");
     } catch {}
   }
 
   // Explore region: fly + hide polygons. Separate from flyToCoords.
   const prevExploreRef = useRef<string | null | undefined>(null);
+  exploreRegionRef.current = exploreRegion;
   useEffect(() => {
     if (!map.current || !mapLoaded.current) return;
     // Skip if same region (prevents re-triggering)
