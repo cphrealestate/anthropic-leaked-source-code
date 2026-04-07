@@ -12,9 +12,11 @@ type WineRegionMapProps = {
   regionCounts?: Record<string, number>;
   height?: string;
   className?: string;
+  /** When set, map flies to this region and zooms in */
+  exploreRegion?: string | null;
 };
 
-export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", className = "" }: WineRegionMapProps) {
+export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", className = "", exploreRegion }: WineRegionMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const popup = useRef<mapboxgl.Popup | null>(null);
@@ -295,6 +297,35 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
 
     return () => { popup.current?.remove(); map.current?.remove(); };
   }, [handleRegionClick, regionCounts]);
+
+  // Fly to region or back to world
+  useEffect(() => {
+    if (!map.current) return;
+
+    if (!exploreRegion) {
+      // Fly back to world view
+      map.current.flyTo({ center: [12, 44], zoom: 3.5, pitch: 0, duration: 1200 });
+      return;
+    }
+
+    const feature = wineRegions.features.find((f) => f.properties.name === exploreRegion);
+    if (!feature) return;
+
+    // Compute bounding box from polygon coords
+    const coords = feature.geometry.coordinates[0];
+    let minLng = Infinity, maxLng = -Infinity, minLat = Infinity, maxLat = -Infinity;
+    for (const [lng, lat] of coords) {
+      if (lng < minLng) minLng = lng;
+      if (lng > maxLng) maxLng = lng;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+    }
+
+    map.current.fitBounds(
+      [[minLng - 0.3, minLat - 0.2], [maxLng + 0.3, maxLat + 0.2]],
+      { duration: 1500, pitch: 35, padding: { top: 80, bottom: 200, left: 40, right: 40 } }
+    );
+  }, [exploreRegion]);
 
   // ── Fallback without token ──
   if (!MAPBOX_TOKEN) {

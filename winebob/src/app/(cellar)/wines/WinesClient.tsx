@@ -67,6 +67,7 @@ export function WinesClient({
   const [search, setSearch] = useState(activeSearch ?? "");
   const [favSet, setFavSet] = useState<Set<string>>(new Set());
   const [sheet, setSheet] = useState<SheetState>("collapsed");
+  const [exploreRegion, setExploreRegion] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [, startTransition] = useTransition();
 
@@ -86,6 +87,7 @@ export function WinesClient({
   }
 
   function onRegionClick(region: string) {
+    setExploreRegion(region);
     nav({ search: region });
     setSheet("half");
   }
@@ -225,7 +227,7 @@ export function WinesClient({
       <div className="hidden lg:flex fixed inset-0">
         {/* Map */}
         <div className="flex-1 relative">
-          <WineRegionMap onRegionClick={onRegionClick} regionCounts={regionCounts} height="100%" />
+          <WineRegionMap onRegionClick={onRegionClick} regionCounts={regionCounts} exploreRegion={exploreRegion} height="100%" />
 
           {/* Search overlay */}
           <div className="absolute top-4 left-4 z-20 w-full max-w-sm">
@@ -239,10 +241,29 @@ export function WinesClient({
 
           {/* Floating buttons */}
           <div className="absolute right-4 top-1/2 -translate-y-1/2 z-20 flex flex-col gap-2">
+            {exploreRegion && (
+              <button
+                onClick={() => { setExploreRegion(null); nav({ search: undefined }); }}
+                className="h-10 px-3 rounded-[12px] bg-[#1A1412]/80 backdrop-blur-xl border border-white/[0.08] flex items-center gap-1.5 text-white/70 shadow-[0_2px_12px_rgba(0,0,0,0.2)] active:scale-90 transition-transform"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+                <span className="text-[11px] font-semibold">World</span>
+              </button>
+            )}
             <Link href="/wines/add" className="h-10 w-10 rounded-[12px] bg-[#1A1412]/70 backdrop-blur-xl border border-white/[0.06] flex items-center justify-center text-white/50 shadow-[0_2px_12px_rgba(0,0,0,0.15)] active:scale-90 transition-transform" title="Add wine">
               <Plus className="h-4 w-4" />
             </Link>
           </div>
+
+          {/* Explore region badge */}
+          {exploreRegion && (
+            <div className="absolute left-4 bottom-16 z-20">
+              <div className="px-4 py-2.5 rounded-[12px] bg-cherry/90 backdrop-blur-xl shadow-[0_2px_12px_rgba(116,7,14,0.3)]">
+                <p className="text-[10px] font-bold text-white/50 uppercase tracking-wider">Exploring</p>
+                <p className="text-[16px] font-bold text-white">{exploreRegion}</p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Sidebar */}
@@ -279,7 +300,7 @@ export function WinesClient({
       <div className="lg:hidden fixed inset-0">
         {/* Map background */}
         <div className="absolute inset-0">
-          <WineRegionMap onRegionClick={onRegionClick} regionCounts={regionCounts} height="100%" />
+          <WineRegionMap onRegionClick={onRegionClick} regionCounts={regionCounts} exploreRegion={exploreRegion} height="100%" />
         </div>
 
         {/* Top overlays */}
@@ -296,11 +317,30 @@ export function WinesClient({
         </div>
 
         {/* Right floating */}
-        <div className="absolute right-3 z-20" style={{ top: "40%" }}>
+        <div className="absolute right-3 z-20 flex flex-col gap-2" style={{ top: "35%" }}>
+          {exploreRegion && (
+            <button
+              onClick={() => { setExploreRegion(null); nav({ search: undefined }); setSheet("collapsed"); }}
+              className="h-10 px-3 rounded-[12px] bg-[#1A1412]/80 backdrop-blur-xl border border-white/[0.08] flex items-center gap-1.5 text-white/70 shadow-[0_2px_12px_rgba(0,0,0,0.2)] active:scale-90 transition-transform"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+              <span className="text-[11px] font-semibold">World</span>
+            </button>
+          )}
           <button className="h-10 w-10 rounded-[12px] bg-[#1A1412]/70 backdrop-blur-xl border border-white/[0.06] flex items-center justify-center text-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.15)]">
             <Layers className="h-4 w-4" />
           </button>
         </div>
+
+        {/* Explore region badge */}
+        {exploreRegion && (
+          <div className="absolute left-3 z-20" style={{ top: "35%" }}>
+            <div className="px-3 py-2 rounded-[12px] bg-cherry/90 backdrop-blur-xl shadow-[0_2px_12px_rgba(116,7,14,0.3)]">
+              <p className="text-[10px] font-bold text-white/50 uppercase tracking-wider">Exploring</p>
+              <p className="text-[14px] font-bold text-white">{exploreRegion}</p>
+            </div>
+          </div>
+        )}
 
         {/* Bottom sheet */}
         <div
