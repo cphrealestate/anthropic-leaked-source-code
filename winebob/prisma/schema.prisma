@@ -26,6 +26,11 @@ model User {
   favorites         WineFavorite[]
   addedWines        Wine[]             @relation("AddedWines")
   sommelierProfile  SommelierProfile?
+  tastings          WineTasting[]
+  wishlist          WineWishlist[]
+  producerFollows   ProducerFollow[]
+  tastingFlights    TastingFlight[]
+  checkIns          WineCheckIn[]
 }
 
 model Account {
@@ -85,10 +90,13 @@ model Wine {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
 
-  blindWines  BlindWine[]
-  liveWines   LiveWine[]
-  favorites   WineFavorite[]
-  addedBy     User?    @relation("AddedWines", fields: [addedById], references: [id])
+  blindWines      BlindWine[]
+  liveWines       LiveWine[]
+  favorites       WineFavorite[]
+  tastings        WineTasting[]
+  wishlistEntries WineWishlist[]
+  checkIns        WineCheckIn[]
+  addedBy         User?    @relation("AddedWines", fields: [addedById], references: [id])
 
   @@index([name, producer])
   @@index([region, country])
@@ -397,4 +405,105 @@ model LiveGuess {
   @@unique([eventId, participantId, winePosition])
   @@index([eventId])
   @@index([participantId])
+}
+
+// ============ WINE TASTING LOG ============
+
+model WineTasting {
+  id        String   @id @default(cuid())
+  userId    String
+  wineId    String
+  eventId   String?  // null = manually logged
+  rating    Int?     // 1-100 personal score
+  notes     String?
+  tastedAt  DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wine  Wine  @relation(fields: [wineId], references: [id])
+
+  @@index([userId])
+  @@index([tastedAt])
+}
+
+// ============ WINE WISHLIST ============
+
+model WineWishlist {
+  id        String   @id @default(cuid())
+  userId    String
+  wineId    String
+  priority  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wine Wine @relation(fields: [wineId], references: [id])
+
+  @@unique([userId, wineId])
+  @@index([userId])
+}
+
+// ============ PRODUCER FOLLOWS ============
+
+model ProducerFollow {
+  id           String   @id @default(cuid())
+  userId       String
+  producerName String
+  region       String?
+  country      String?
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, producerName])
+  @@index([userId])
+}
+
+// ============ TASTING FLIGHTS ============
+
+model TastingFlight {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String?
+  path      Json     // GeoJSON LineString
+  wines     Json     // ordered array of wine selections
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ============ WINE CHECK-INS (Live Heatmap) ============
+
+model WineCheckIn {
+  id        String   @id @default(cuid())
+  userId    String
+  wineId    String
+  lat       Float
+  lng       Float
+  city      String?
+  country   String?
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wine Wine @relation(fields: [wineId], references: [id])
+
+  @@index([expiresAt])
+  @@index([createdAt])
+}
+
+// ============ FLAVOR PROFILES ============
+
+model RegionFlavorProfile {
+  id       String @id @default(cuid())
+  region   String @unique
+  country  String
+  acidity  Float  // 0.0 - 1.0
+  tannin   Float
+  body     Float
+  fruit    Float
+  earth    Float
+  floral   Float
+
+  @@index([region])
 }
