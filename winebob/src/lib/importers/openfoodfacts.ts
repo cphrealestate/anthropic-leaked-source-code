@@ -9,7 +9,25 @@
  *   npx tsx src/lib/importers/openfoodfacts.ts
  */
 
-import { prisma } from "@/lib/db";
+import "dotenv/config";
+import { PrismaNeonHttp } from "@prisma/adapter-neon";
+import { PrismaClient } from "../../generated/prisma/client";
+
+// ---------------------------------------------------------------------------
+// Prisma client (standalone — for CLI usage with `npx tsx`)
+// ---------------------------------------------------------------------------
+
+function createPrismaClient(): PrismaClient {
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) {
+    throw new Error("DATABASE_URL is not set");
+  }
+  const adapter = new PrismaNeonHttp(dbUrl, {});
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return new PrismaClient({ adapter } as any);
+}
+
+const prisma = createPrismaClient();
 
 // ---------------------------------------------------------------------------
 // Types
@@ -222,10 +240,10 @@ function sleep(ms: number): Promise<void> {
 // ---------------------------------------------------------------------------
 
 async function fetchPage(category: string, page: number): Promise<OFFSearchResponse> {
+  // Use the Open Food Facts search endpoint with search_terms for broad matching
   const url =
-    `${BASE_URL}/cgi/search.pl?action=process` +
-    `&tagtype_0=categories&tag_contains_0=contains&tag_0=${encodeURIComponent(category)}` +
-    `&json=true&page_size=${PAGE_SIZE}&page=${page}`;
+    `${BASE_URL}/cgi/search.pl?search_terms=${encodeURIComponent(category)}` +
+    `&page_size=${PAGE_SIZE}&page=${page}&json=true`;
 
   const res = await rateLimitedFetch(url);
   if (!res.ok) {
@@ -340,6 +358,10 @@ export async function runOpenFoodFactsImport(): Promise<{
 
   const stats: ImportStats = { fetched: 0, created: 0, skipped: 0, failed: 0 };
 
+  // Track barcodes seen across all categories to prevent cross-category
+  // duplicates (e.g., a wine appearing in both "wines" and "red wines")
+  const seenBarcodes = new Set<string>();
+
   try {
     for (const category of WINE_CATEGORIES) {
       console.log(`\n[OFF Import] Searching category: "${category}"`);
@@ -376,10 +398,19 @@ export async function runOpenFoodFactsImport(): Promise<{
               continue;
             }
 
+            // Cross-category dedup: skip if we've already seen this barcode
+            // in a previous category during this import run
+            if (mapped.barcode && seenBarcodes.has(mapped.barcode)) {
+              skipCount++;
+              stats.skipped++;
+              continue;
+            }
+
             const dup = await isDuplicate(mapped.barcode, mapped.name, mapped.producer);
             if (dup) {
               skipCount++;
               stats.skipped++;
+              if (mapped.barcode) seenBarcodes.add(mapped.barcode);
               continue;
             }
 

@@ -317,19 +317,25 @@ async function importWines(
     recordsFailed: 0,
   };
 
-  // Load existing wines for dedup (name+producer, case-insensitive)
+  // Load existing wines for dedup — only wines whose name appears in the
+  // current import batch (avoids loading the entire wines table into memory).
   console.log("  Loading existing wines for deduplication...");
-  const existingWines = await prisma.wine.findMany({
-    select: { name: true, producer: true },
-  });
+  const batchNames = [...new Set(wines.map((w) => w.name))];
+  const existingSet = new Set<string>();
 
-  const existingSet = new Set(
-    existingWines.map(
-      (w: { name: string; producer: string }) =>
-        `${w.name.toLowerCase()}|${w.producer.toLowerCase()}`
-    )
-  );
-  console.log(`  Found ${existingSet.size} existing wines.`);
+  // Query in batches of 500 names to avoid overly large IN clauses
+  const NAME_BATCH_SIZE = 500;
+  for (let i = 0; i < batchNames.length; i += NAME_BATCH_SIZE) {
+    const nameBatch = batchNames.slice(i, i + NAME_BATCH_SIZE);
+    const existingWines = await prisma.wine.findMany({
+      where: { name: { in: nameBatch } },
+      select: { name: true, producer: true },
+    });
+    for (const w of existingWines) {
+      existingSet.add(`${w.name.toLowerCase()}|${w.producer.toLowerCase()}`);
+    }
+  }
+  console.log(`  Found ${existingSet.size} existing wines matching this batch.`);
 
   // Filter out duplicates
   const toInsert: ParsedWine[] = [];
@@ -353,6 +359,8 @@ async function importWines(
     const totalBatches = Math.ceil(toInsert.length / BATCH_SIZE);
 
     try {
+      // Note: skipDuplicates is intentionally omitted — it may not work with
+      // the Neon HTTP adapter, and we already do manual dedup above.
       await prisma.wine.createMany({
         data: batch.map((wine) => ({
           name: wine.name,
@@ -368,7 +376,6 @@ async function importWines(
           importBatchId,
           isPublic: true,
         })),
-        skipDuplicates: true,
       });
 
       stats.recordsCreated += batch.length;
