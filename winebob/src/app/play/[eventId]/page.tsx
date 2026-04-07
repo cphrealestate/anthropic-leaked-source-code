@@ -137,25 +137,40 @@ export default function PlayPage({
     (w) => w.position === event.currentWine
   );
 
+  // Wine is locked once revealed — no more edits allowed
+  const isWineLocked = currentBlindWine?.revealed ?? false;
+
+  // Track which wine the form is currently for (prevents clearing on poll updates)
+  const formWineRef = useRef<number>(0);
+
   // Pre-fill form when wine changes or existing guess is found
   useEffect(() => {
-    if (currentGuess && !editing) {
-      setForm({
-        grape: currentGuess.guessedGrape ?? "",
-        region: currentGuess.guessedRegion ?? "",
-        country: currentGuess.guessedCountry ?? "",
-        vintage: currentGuess.guessedVintage?.toString() ?? "",
-        producer: currentGuess.guessedProducer ?? "",
-        type: currentGuess.guessedType ?? "",
-        price: currentGuess.guessedPrice?.toString() ?? "",
-        notes: currentGuess.notes ?? "",
-      });
-      setSubmitted(true);
-    } else if (!currentGuess) {
-      setForm(emptyForm);
-      setSubmitted(false);
+    const winePos = event?.currentWine ?? 0;
+
+    // Only reset form when the wine position actually changes
+    if (winePos !== formWineRef.current) {
+      formWineRef.current = winePos;
+      if (currentGuess) {
+        setForm({
+          grape: currentGuess.guessedGrape ?? "",
+          region: currentGuess.guessedRegion ?? "",
+          country: currentGuess.guessedCountry ?? "",
+          vintage: currentGuess.guessedVintage?.toString() ?? "",
+          producer: currentGuess.guessedProducer ?? "",
+          type: currentGuess.guessedType ?? "",
+          price: currentGuess.guessedPrice?.toString() ?? "",
+          notes: currentGuess.notes ?? "",
+        });
+        setSubmitted(true);
+      } else {
+        setForm(emptyForm);
+        setSubmitted(false);
+        startTimeRef.current = Date.now();
+      }
       setEditing(false);
-      startTimeRef.current = Date.now();
+    } else if (currentGuess && !editing && !submitted) {
+      // Existing guess found on same wine (e.g., after submit + poll)
+      setSubmitted(true);
     }
   }, [event?.currentWine, currentGuess?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -418,13 +433,21 @@ export default function PlayPage({
                 {form.notes && <SummaryPill label="Notes" value={form.notes} />}
               </div>
 
-              <button
-                onClick={() => setEditing(true)}
-                className="mt-5 flex items-center gap-2 text-cherry font-semibold text-[14px] touch-target"
-              >
-                <Pencil className="h-4 w-4" />
-                Edit guess
-              </button>
+              {!isWineLocked && (
+                <button
+                  onClick={() => setEditing(true)}
+                  className="mt-5 flex items-center gap-2 text-cherry font-semibold text-[14px] touch-target"
+                >
+                  <Pencil className="h-4 w-4" />
+                  Edit guess
+                </button>
+              )}
+              {isWineLocked && (
+                <p className="mt-4 text-[12px] text-muted flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5" />
+                  Guesses locked — wine has been revealed
+                </p>
+              )}
             </div>
           ) : (
             /* ---- Guess form ---- */
@@ -603,8 +626,8 @@ export default function PlayPage({
         </div>
       </div>
 
-      {/* Sticky submit button */}
-      {(!submitted || editing) && (
+      {/* Sticky submit button — hidden when wine is locked (revealed) */}
+      {(!submitted || editing) && !isWineLocked && (
         <div className="fixed bottom-0 left-0 right-0 safe-bottom z-50">
           <div className="max-w-lg mx-auto px-5 pb-5 pt-3 bg-gradient-to-t from-background via-background to-transparent">
             <button
