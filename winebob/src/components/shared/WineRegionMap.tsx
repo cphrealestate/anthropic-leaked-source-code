@@ -30,14 +30,52 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: "mapbox://styles/mapbox/dark-v11",
+      style: {
+        version: 8,
+        name: "Winebob",
+        sources: {
+          "mapbox-streets": { type: "vector", url: "mapbox://mapbox.mapbox-streets-v8" },
+          "mapbox-terrain": { type: "vector", url: "mapbox://mapbox.mapbox-terrain-v2" },
+          "mapbox-dem": { type: "raster-dem", url: "mapbox://mapbox.mapbox-terrain-dem-v1", tileSize: 512, maxzoom: 14 },
+        },
+        terrain: { source: "mapbox-dem", exaggeration: 1.3 },
+        layers: [
+          // Background
+          { id: "bg", type: "background", paint: { "background-color": "#110E0A" } },
+          // Hillshade for 3D terrain feel
+          { id: "hillshade", type: "hillshade", source: "mapbox-terrain", "source-layer": "hillshade", paint: { "hillshade-shadow-color": "#0A0806", "hillshade-highlight-color": "#2A2418", "hillshade-accent-color": "#1A1610", "hillshade-exaggeration": 0.3 } },
+          // Water
+          { id: "water", type: "fill", source: "mapbox-streets", "source-layer": "water", paint: { "fill-color": "#141C28" } },
+          // Land use (parks, forests etc)
+          { id: "landuse", type: "fill", source: "mapbox-streets", "source-layer": "landuse", paint: { "fill-color": ["match", ["get", "class"], "park", "#141A10", "agriculture", "#16140E", "wood", "#121610", "#12100C"], "fill-opacity": 0.5 } },
+          // Buildings (subtle at zoom)
+          { id: "buildings", type: "fill", source: "mapbox-streets", "source-layer": "building", minzoom: 12, paint: { "fill-color": "#1A1814", "fill-opacity": 0.6 } },
+          // Roads — tertiary
+          { id: "roads-tertiary", type: "line", source: "mapbox-streets", "source-layer": "road", filter: ["in", "class", "street", "street_limited"], minzoom: 10, paint: { "line-color": "#1E1A14", "line-width": 0.5 } },
+          // Roads — secondary
+          { id: "roads-secondary", type: "line", source: "mapbox-streets", "source-layer": "road", filter: ["in", "class", "secondary", "tertiary"], minzoom: 8, paint: { "line-color": "#221E16", "line-width": 0.8 } },
+          // Roads — primary
+          { id: "roads-primary", type: "line", source: "mapbox-streets", "source-layer": "road", filter: ["in", "class", "primary", "trunk"], paint: { "line-color": "#2A2418", "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.5, 10, 1.5] } },
+          // Roads — motorway
+          { id: "roads-motorway", type: "line", source: "mapbox-streets", "source-layer": "road", filter: ["==", "class", "motorway"], paint: { "line-color": "#302818", "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.8, 10, 2] } },
+          // Admin boundaries
+          { id: "admin-0", type: "line", source: "mapbox-streets", "source-layer": "admin", filter: ["==", "admin_level", 0], paint: { "line-color": "#3A3020", "line-width": 0.8, "line-opacity": 0.5 } },
+          { id: "admin-1", type: "line", source: "mapbox-streets", "source-layer": "admin", filter: ["==", "admin_level", 1], minzoom: 4, paint: { "line-color": "#2A2418", "line-width": 0.4, "line-opacity": 0.3, "line-dasharray": [3, 2] } },
+          // Place labels — countries
+          { id: "labels-country", type: "symbol", source: "mapbox-streets", "source-layer": "place_label", filter: ["==", "class", "country"], layout: { "text-field": ["get", "name_en"], "text-size": ["interpolate", ["linear"], ["zoom"], 2, 10, 5, 13], "text-transform": "uppercase", "text-letter-spacing": 0.15, "text-font": ["DIN Pro Medium", "Arial Unicode MS Regular"] }, paint: { "text-color": "#5A4E3A", "text-opacity": 0.7 } },
+          // Place labels — cities
+          { id: "labels-city", type: "symbol", source: "mapbox-streets", "source-layer": "place_label", filter: ["in", "class", "city"], layout: { "text-field": ["get", "name_en"], "text-size": ["interpolate", ["linear"], ["zoom"], 4, 9, 8, 13], "text-font": ["DIN Pro Regular", "Arial Unicode MS Regular"] }, paint: { "text-color": "#4A4030", "text-opacity": 0.5, "text-halo-color": "#110E0A", "text-halo-width": 1 } },
+          // Place labels — towns (at higher zoom)
+          { id: "labels-town", type: "symbol", source: "mapbox-streets", "source-layer": "place_label", filter: ["in", "class", "town", "village"], minzoom: 8, layout: { "text-field": ["get", "name_en"], "text-size": 10, "text-font": ["DIN Pro Regular", "Arial Unicode MS Regular"] }, paint: { "text-color": "#3A3428", "text-opacity": 0.4, "text-halo-color": "#110E0A", "text-halo-width": 1 } },
+        ],
+      } as mapboxgl.StyleSpecification,
       center: [12, 44],
       zoom: 3.5,
       minZoom: 1.5,
-      maxZoom: 10,
+      maxZoom: 14,
       attributionControl: false,
-      pitchWithRotate: false,
-      dragRotate: false,
+      pitch: 20,
+      bearing: 0,
     });
 
     popup.current = new mapboxgl.Popup({
