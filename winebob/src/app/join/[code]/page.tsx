@@ -139,7 +139,7 @@ export default function JoinPage({
   // --- Loading ---
   if (loading) {
     return (
-      <div className="min-h-dvh bg-background flex items-center justify-center p-6">
+      <div className="min-h-dvh bg-background flex items-center justify-center px-4">
         <div className="text-center animate-fade-in-up">
           <div className="text-5xl mb-4">🍷</div>
           <p className="text-lg text-muted font-serif">
@@ -153,8 +153,8 @@ export default function JoinPage({
   // --- Not Found ---
   if (notFound || !event) {
     return (
-      <div className="min-h-dvh bg-background flex items-center justify-center p-6">
-        <div className="text-center animate-fade-in-up">
+      <div className="min-h-dvh bg-background flex items-center justify-center px-4">
+        <div className="text-center animate-fade-in-up max-w-md mx-auto">
           <div className="text-5xl mb-4">😕</div>
           <h1 className="text-2xl font-serif font-bold text-foreground mb-2">
             Event not found
@@ -164,9 +164,9 @@ export default function JoinPage({
           </p>
           <a
             href="/"
-            className="inline-block px-6 py-3 rounded-xl bg-wine-burgundy text-white font-semibold touch-target"
+            className="btn-primary inline-block touch-target"
           >
-            Back to Home
+            ← Back to Home
           </a>
         </div>
       </div>
@@ -180,22 +180,22 @@ export default function JoinPage({
     <div className="min-h-dvh bg-background safe-top safe-bottom">
       {/* Server error banner */}
       {serverError && (
-        <div className="sticky top-0 z-50 bg-red-600 text-white px-4 py-3 text-center text-sm font-medium animate-fade-in-up">
+        <div className="sticky top-0 z-50 bg-red-50 border-b border-red-200 text-red-700 px-4 py-3 text-center text-sm font-medium animate-fade-in-up">
           {serverError}
           <button
             onClick={() => setServerError("")}
-            className="ml-3 underline"
+            className="ml-3 underline text-red-800"
           >
             Dismiss
           </button>
         </div>
       )}
 
-      <div className="max-w-md mx-auto px-5 py-8">
+      <div className="max-w-md mx-auto px-4 py-8">
         {/* Back link */}
         <a
           href="/"
-          className="inline-flex items-center gap-1 text-[13px] font-semibold text-muted mb-6 active:text-foreground transition-colors touch-target"
+          className="inline-flex items-center gap-1 text-sm font-medium text-muted hover:text-foreground active:text-foreground transition-colors touch-target mb-6"
         >
           ← Back to Home
         </a>
@@ -218,7 +218,10 @@ export default function JoinPage({
         </div>
 
         {/* Form Card */}
-        <form onSubmit={handleSubmit} className="wine-card p-6 animate-fade-in-up">
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white border border-black/[0.06] rounded-[16px] shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] p-6 animate-fade-in-up"
+        >
           {/* Display Name */}
           <div className="mb-5">
             <label
@@ -237,7 +240,7 @@ export default function JoinPage({
               className="input-field w-full touch-target"
             />
             {errors.displayName && (
-              <p className="text-red-500 text-sm mt-1">{errors.displayName}</p>
+              <p className="text-red-600 text-sm mt-1.5">{errors.displayName}</p>
             )}
           </div>
 
@@ -271,7 +274,7 @@ export default function JoinPage({
               )}
             </select>
             {errors.birthYear && (
-              <p className="text-red-500 text-sm mt-1">{errors.birthYear}</p>
+              <p className="text-red-600 text-sm mt-1.5">{errors.birthYear}</p>
             )}
           </div>
 
@@ -287,7 +290,7 @@ export default function JoinPage({
               type="button"
               onClick={handleDetectLocation}
               disabled={detectingLocation}
-              className="w-full mb-3 px-4 py-3 rounded-xl border-2 border-dashed border-wine-gold/50 text-wine-burgundy font-medium text-base touch-target hover:bg-wine-cream-dark/40 transition-colors disabled:opacity-50"
+              className="w-full mb-3 px-4 py-3 rounded-[12px] border-2 border-dashed border-cherry/20 text-cherry font-medium text-base touch-target hover:bg-cherry/5 transition-colors disabled:opacity-50"
             >
               {detectingLocation
                 ? "Detecting..."
@@ -329,21 +332,21 @@ export default function JoinPage({
                 type="checkbox"
                 checked={consent}
                 onChange={(e) => setConsent(e.target.checked)}
-                className="mt-1 h-5 w-5 rounded border-card-border accent-wine-burgundy shrink-0"
+                className="mt-0.5 h-5 w-5 rounded border-black/10 accent-cherry shrink-0"
               />
-              <span className="text-sm text-muted leading-snug">
+              <span className="text-sm text-muted leading-relaxed">
                 I agree that anonymized tasting data may be used for wine
                 industry insights.{" "}
                 <a
                   href="/privacy"
-                  className="underline text-wine-burgundy hover:text-wine-burgundy-light"
+                  className="underline text-cherry hover:text-cherry/80"
                 >
                   Privacy Policy
                 </a>
               </span>
             </label>
             {errors.consent && (
-              <p className="text-red-500 text-sm mt-1">{errors.consent}</p>
+              <p className="text-red-600 text-sm mt-1.5">{errors.consent}</p>
             )}
           </div>
 

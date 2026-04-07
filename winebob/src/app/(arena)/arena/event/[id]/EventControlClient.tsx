@@ -111,7 +111,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }
 function StatusBadge({ status }: { status: string }) {
   const config = STATUS_CONFIG[status] ?? STATUS_CONFIG.draft;
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[12px] font-bold ${config.bg} ${config.color}`}>
+    <span className={`inline-flex items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-[12px] font-bold ${config.bg} ${config.color}`}>
       {status === "live" && <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />}
       {config.label}
     </span>
@@ -254,7 +254,7 @@ export function EventControlClient({ event }: EventControlClientProps) {
 
   return (
     <div className="min-h-screen pb-36 pt-6 safe-top bg-background">
-      <div className="container-app">
+      <div className="px-4 md:px-8 lg:px-10">
         {/* ========== HEADER ========== */}
         <header className="mb-6">
           <Link
@@ -271,24 +271,24 @@ export function EventControlClient({ event }: EventControlClientProps) {
             <StatusBadge status={event.status} />
           </div>
 
-          {/* Join Code card */}
-          <div className="wine-card p-6 flex flex-col items-center gap-4">
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-muted">
+          {/* Join Code hero card */}
+          <div className="rounded-[20px] bg-gradient-to-br from-cherry to-cherry/90 p-6 flex flex-col items-center gap-4 shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)]">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/70">
               Join Code
             </p>
-            <p className="font-mono text-5xl sm:text-6xl font-black tracking-[0.3em] text-cherry select-all leading-none">
+            <p className="font-mono text-5xl sm:text-6xl font-black tracking-[0.3em] text-white select-all leading-none">
               {event.joinCode}
             </p>
             <div className="flex items-center gap-2.5">
               <button
                 onClick={handleCopyCode}
-                className="touch-target inline-flex items-center gap-2 rounded-xl bg-widget-wine px-4 py-2.5 text-[13px] font-semibold text-foreground active:scale-95 transition-transform"
+                className="touch-target inline-flex items-center gap-2 rounded-[12px] bg-white/20 px-4 py-2.5 text-[13px] font-semibold text-white active:scale-95 transition-transform"
               >
-                {copied ? <><Check className="h-4 w-4 text-green-600" /> Copied!</> : <><Copy className="h-4 w-4" /> Copy</>}
+                {copied ? <><Check className="h-4 w-4 text-green-300" /> Copied!</> : <><Copy className="h-4 w-4" /> Copy</>}
               </button>
               <button
                 onClick={handleShowQR}
-                className="touch-target inline-flex items-center gap-2 rounded-xl bg-widget-sky px-4 py-2.5 text-[13px] font-semibold text-foreground active:scale-95 transition-transform"
+                className="touch-target inline-flex items-center gap-2 rounded-[12px] bg-white/20 px-4 py-2.5 text-[13px] font-semibold text-white active:scale-95 transition-transform"
               >
                 <QrCode className="h-4 w-4" /> Share QR
               </button>
@@ -296,102 +296,105 @@ export function EventControlClient({ event }: EventControlClientProps) {
           </div>
         </header>
 
-        {/* ========== GUEST LIST ========== */}
-        <section className="mb-6">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="h-7 w-7 rounded-lg widget-sage flex items-center justify-center">
-              <Users className="h-3.5 w-3.5 text-emerald-700" />
-            </div>
-            <h2 className="text-[15px] font-bold text-foreground">Guests</h2>
-            <span className="ml-auto text-[13px] font-semibold text-muted">{event.guests.length}</span>
-          </div>
-
-          {event.guests.length === 0 ? (
-            <div className="wine-card py-10 flex flex-col items-center text-center px-4">
-              <div className="h-12 w-12 rounded-2xl widget-sage flex items-center justify-center mb-3">
-                <Users className="h-6 w-6 text-emerald-700/30" />
+        {/* ========== GUEST LIST + WINE FLIGHT — 2 col on desktop ========== */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {/* ========== GUEST LIST ========== */}
+          <section>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-7 w-7 rounded-[8px] widget-sage flex items-center justify-center">
+                <Users className="h-3.5 w-3.5 text-emerald-700" />
               </div>
-              <p className="text-[13px] text-muted">No guests yet. Share the join code.</p>
+              <h2 className="text-[15px] font-bold text-foreground">Guests</h2>
+              <span className="ml-auto text-[13px] font-semibold text-muted">{event.guests.length}</span>
             </div>
-          ) : (
-            <div className="wine-card divide-y divide-card-border/40">
-              {event.guests.map((guest) => (
-                <div key={guest.id} className="flex items-center gap-3 px-4 py-3">
-                  <div className="h-9 w-9 rounded-xl widget-wine flex items-center justify-center text-[13px] font-bold text-cherry">
-                    {guest.displayName.charAt(0).toUpperCase()}
-                  </div>
-                  <span className="text-[14px] font-medium text-foreground">{guest.displayName}</span>
+
+            {event.guests.length === 0 ? (
+              <div className="bg-white rounded-[16px] border border-card-border/40 shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] py-10 flex flex-col items-center text-center px-4">
+                <div className="h-12 w-12 rounded-[16px] widget-sage flex items-center justify-center mb-3">
+                  <Users className="h-6 w-6 text-emerald-700/30" />
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* ========== WINE FLIGHT ========== */}
-        <section className="mb-6">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="h-7 w-7 rounded-lg widget-wine flex items-center justify-center">
-              <Wine className="h-3.5 w-3.5 text-cherry" />
-            </div>
-            <h2 className="text-[15px] font-bold text-foreground">Wine Flight</h2>
-            <span className="ml-auto text-[13px] font-semibold text-muted">{event.wines.length} wines</span>
-          </div>
-
-          <div className="space-y-2">
-            {event.wines.map((bw) => {
-              const isCurrent = bw.position === event.currentWine;
-              const isPast = bw.position < event.currentWine;
-              const typeColor =
-                bw.wine?.type.toLowerCase() === "red" ? "bg-red-500" :
-                bw.wine?.type.toLowerCase() === "white" ? "bg-amber-200" :
-                bw.wine?.type.toLowerCase() === "rosé" ? "bg-pink-300" : "bg-gray-300";
-
-              return (
-                <div
-                  key={bw.id}
-                  className={`wine-card px-4 py-3.5 flex items-center gap-3 transition-all ${
-                    isCurrent ? "ring-2 ring-cherry shadow-md" : ""
-                  } ${isPast && bw.revealed ? "opacity-60" : ""}`}
-                >
-                  <div className={`flex-shrink-0 h-9 w-9 rounded-xl flex items-center justify-center text-[13px] font-bold ${
-                    isCurrent
-                      ? "bg-cherry text-white"
-                      : bw.revealed
-                        ? "bg-green-50 text-green-600"
-                        : "bg-card-border/30 text-muted"
-                  }`}>
-                    {bw.revealed ? <Check className="h-4 w-4" strokeWidth={3} /> : bw.position}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <div className={`h-2.5 w-2.5 rounded-full ${typeColor} flex-shrink-0`} />
-                      <p className="text-[14px] font-semibold text-foreground truncate">{bw.wine?.name ?? "Unknown"}</p>
+                <p className="text-[13px] text-muted">No guests yet. Share the join code.</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-[16px] border border-card-border/40 shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] divide-y divide-card-border/40">
+                {event.guests.map((guest) => (
+                  <div key={guest.id} className="flex items-center gap-3 px-4 py-3">
+                    <div className="h-9 w-9 rounded-[8px] widget-wine flex items-center justify-center text-[13px] font-bold text-cherry">
+                      {guest.displayName.charAt(0).toUpperCase()}
                     </div>
-                    <p className="text-[11px] text-muted truncate mt-0.5">
-                      {bw.wine?.producer}{bw.wine?.vintage ? ` ${bw.wine.vintage}` : " NV"} · {bw.wine?.region}, {bw.wine?.country}
-                    </p>
+                    <span className="text-[14px] font-medium text-foreground">{guest.displayName}</span>
                   </div>
+                ))}
+              </div>
+            )}
+          </section>
 
-                  {bw.revealed && (
-                    <span className="flex-shrink-0 text-[11px] font-semibold text-green-600 flex items-center gap-1">
-                      <Eye className="h-3 w-3" /> Revealed
-                    </span>
-                  )}
-                  {isCurrent && !bw.revealed && (
-                    <span className="flex-shrink-0 text-[11px] font-bold text-cherry animate-pulse">Current</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </section>
+          {/* ========== WINE FLIGHT ========== */}
+          <section>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-7 w-7 rounded-[8px] widget-wine flex items-center justify-center">
+                <Wine className="h-3.5 w-3.5 text-cherry" />
+              </div>
+              <h2 className="text-[15px] font-bold text-foreground">Wine Flight</h2>
+              <span className="ml-auto text-[13px] font-semibold text-muted">{event.wines.length} wines</span>
+            </div>
+
+            <div className="space-y-2">
+              {event.wines.map((bw) => {
+                const isCurrent = bw.position === event.currentWine;
+                const isPast = bw.position < event.currentWine;
+                const typeColor =
+                  bw.wine?.type.toLowerCase() === "red" ? "bg-red-500" :
+                  bw.wine?.type.toLowerCase() === "white" ? "bg-amber-200" :
+                  bw.wine?.type.toLowerCase() === "rosé" ? "bg-pink-300" : "bg-gray-300";
+
+                return (
+                  <div
+                    key={bw.id}
+                    className={`bg-white rounded-[16px] border border-card-border/40 shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] px-4 py-3.5 flex items-center gap-3 transition-all ${
+                      isCurrent ? "ring-2 ring-cherry shadow-md" : ""
+                    } ${isPast && bw.revealed ? "opacity-60" : ""}`}
+                  >
+                    <div className={`flex-shrink-0 h-9 w-9 rounded-[8px] flex items-center justify-center text-[13px] font-bold ${
+                      isCurrent
+                        ? "bg-cherry text-white"
+                        : bw.revealed
+                          ? "bg-green-50 text-green-600"
+                          : "bg-card-border/30 text-muted"
+                    }`}>
+                      {bw.revealed ? <Check className="h-4 w-4" strokeWidth={3} /> : bw.position}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <div className={`h-2.5 w-2.5 rounded-full ${typeColor} flex-shrink-0`} />
+                        <p className="text-[14px] font-semibold text-foreground truncate">{bw.wine?.name ?? "Unknown"}</p>
+                      </div>
+                      <p className="text-[11px] text-muted truncate mt-0.5">
+                        {bw.wine?.producer}{bw.wine?.vintage ? ` ${bw.wine.vintage}` : " NV"} · {bw.wine?.region}, {bw.wine?.country}
+                      </p>
+                    </div>
+
+                    {bw.revealed && (
+                      <span className="flex-shrink-0 text-[11px] font-semibold text-green-600 flex items-center gap-1">
+                        <Eye className="h-3 w-3" /> Revealed
+                      </span>
+                    )}
+                    {isCurrent && !bw.revealed && (
+                      <span className="flex-shrink-0 text-[11px] font-bold text-cherry animate-pulse">Current</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        </div>
 
         {/* ========== LEADERBOARD ========== */}
         {hasAnyScores && (
           <section className="mb-6">
             <div className="flex items-center gap-2 mb-3">
-              <div className="h-7 w-7 rounded-lg widget-gold flex items-center justify-center">
+              <div className="h-7 w-7 rounded-[8px] widget-gold flex items-center justify-center">
                 <Trophy className="h-3.5 w-3.5 text-amber-700" />
               </div>
               <h2 className="text-[15px] font-bold text-foreground">
@@ -399,10 +402,16 @@ export function EventControlClient({ event }: EventControlClientProps) {
               </h2>
             </div>
 
-            <div className="wine-card divide-y divide-card-border/40">
+            <div className="bg-white rounded-[16px] border border-card-border/40 shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] overflow-hidden">
+              {/* Table header */}
+              <div className="flex items-center gap-3 px-4 py-2.5 border-b border-card-border/40 bg-card-border/10">
+                <span className="flex-shrink-0 w-8 text-[11px] font-bold text-muted uppercase tracking-wider">#</span>
+                <span className="flex-1 text-[11px] font-bold text-muted uppercase tracking-wider">Guest</span>
+                <span className="text-[11px] font-bold text-muted uppercase tracking-wider">Score</span>
+              </div>
               {rankedGuests.map((guest, idx) => (
-                <div key={guest.id} className={`flex items-center gap-3 px-4 py-3 ${idx === 0 ? "bg-widget-gold/30" : ""}`}>
-                  <div className={`flex-shrink-0 h-8 w-8 rounded-xl flex items-center justify-center text-[12px] font-bold ${
+                <div key={guest.id} className={`flex items-center gap-3 px-4 py-3 ${idx === 0 ? "bg-widget-gold/30" : ""} ${idx < rankedGuests.length - 1 ? "border-b border-card-border/20" : ""}`}>
+                  <div className={`flex-shrink-0 h-8 w-8 rounded-[8px] flex items-center justify-center text-[12px] font-bold ${
                     idx < 3 ? MEDAL_COLORS[idx] : "bg-card-border/30 text-muted"
                   }`}>
                     {idx === 0 ? <Crown className="h-3.5 w-3.5" /> : idx + 1}
@@ -422,8 +431,8 @@ export function EventControlClient({ event }: EventControlClientProps) {
         {/* Completed — no scores */}
         {event.status === "completed" && !hasAnyScores && (
           <section className="mb-6">
-            <div className="wine-card py-10 flex flex-col items-center text-center px-4">
-              <div className="h-14 w-14 rounded-2xl widget-gold flex items-center justify-center mb-3">
+            <div className="bg-white rounded-[16px] border border-card-border/40 shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] py-10 flex flex-col items-center text-center px-4">
+              <div className="h-14 w-14 rounded-[16px] widget-gold flex items-center justify-center mb-3">
                 <Trophy className="h-7 w-7 text-amber-600/40" />
               </div>
               <p className="text-[16px] font-bold text-foreground">Tasting Complete</p>
@@ -435,16 +444,16 @@ export function EventControlClient({ event }: EventControlClientProps) {
 
       {/* ========== CONTROL BUTTONS (fixed bottom) ========== */}
       <div className="fixed bottom-0 inset-x-0 glass-card border-t border-card-border/30 safe-bottom z-50">
-        <div className="container-app py-4 flex flex-col gap-3">
+        <div className="px-4 md:px-8 lg:px-10 py-4 flex flex-col gap-3">
           {event.status === "draft" && (
-            <button onClick={handleOpenLobby} disabled={isPending} className="btn-primary touch-target">
+            <button onClick={handleOpenLobby} disabled={isPending} className="btn-primary w-full rounded-[12px] touch-target">
               <DoorOpen className="h-5 w-5" />
               {isPending ? "Opening..." : "Open Lobby"}
             </button>
           )}
 
           {event.status === "lobby" && (
-            <button onClick={handleStartTasting} disabled={isPending || event.wines.length === 0} className="btn-primary touch-target">
+            <button onClick={handleStartTasting} disabled={isPending || event.wines.length === 0} className="btn-primary w-full rounded-[12px] touch-target">
               <Play className="h-5 w-5" />
               {isPending ? "Starting..." : `Start Tasting (${event.guests.length} guests)`}
             </button>
@@ -453,19 +462,19 @@ export function EventControlClient({ event }: EventControlClientProps) {
           {event.status === "live" && (
             <>
               {!isCurrentRevealed && event.currentWine > 0 && (
-                <button onClick={handleRevealWine} disabled={isPending} className="btn-primary touch-target">
+                <button onClick={handleRevealWine} disabled={isPending} className="btn-primary w-full rounded-[12px] touch-target">
                   <Eye className="h-5 w-5" />
                   {isPending ? "Revealing..." : `Reveal Wine #${event.currentWine}`}
                 </button>
               )}
               {isCurrentRevealed && !isLastWine && (
-                <button onClick={handleNextWine} disabled={isPending} className="btn-primary touch-target">
+                <button onClick={handleNextWine} disabled={isPending} className="btn-primary w-full rounded-[12px] touch-target">
                   <ChevronRight className="h-5 w-5" />
                   {isPending ? "Advancing..." : "Next Wine"}
                 </button>
               )}
               {isCurrentRevealed && isLastWine && (
-                <button onClick={handleFinishTasting} disabled={isPending} className="btn-primary touch-target">
+                <button onClick={handleFinishTasting} disabled={isPending} className="btn-primary w-full rounded-[12px] touch-target">
                   <Flag className="h-5 w-5" />
                   {isPending ? "Finishing..." : "Finish Tasting"}
                 </button>
@@ -475,11 +484,11 @@ export function EventControlClient({ event }: EventControlClientProps) {
 
           {event.status === "completed" && (
             <div className="flex gap-3">
-              <Link href="/arena" className="btn-secondary flex-1 touch-target">
+              <Link href="/arena" className="btn-secondary flex-1 rounded-[12px] touch-target">
                 <ChevronLeft className="h-4 w-4" />
                 Dashboard
               </Link>
-              <Link href="/arena/create" className="btn-primary flex-1 touch-target">
+              <Link href="/arena/create" className="btn-primary flex-1 rounded-[12px] touch-target">
                 <Plus className="h-4 w-4" />
                 New Tasting
               </Link>
@@ -491,9 +500,9 @@ export function EventControlClient({ event }: EventControlClientProps) {
       {/* ========== QR CODE MODAL ========== */}
       {showQR && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowQR(false)}>
-          <div className="wine-card p-8 max-w-[340px] w-full mx-4 text-center animate-scale-in" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-[16px] border border-card-border/40 shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] p-8 max-w-[340px] w-full mx-4 text-center animate-scale-in relative" onClick={(e) => e.stopPropagation()}>
             {/* Close */}
-            <button onClick={() => setShowQR(false)} className="absolute top-4 right-4 h-8 w-8 rounded-lg bg-card-border/20 flex items-center justify-center touch-target">
+            <button onClick={() => setShowQR(false)} className="absolute top-4 right-4 h-8 w-8 rounded-[8px] bg-card-border/20 flex items-center justify-center touch-target">
               <X className="h-4 w-4 text-stone" />
             </button>
 
@@ -503,7 +512,7 @@ export function EventControlClient({ event }: EventControlClientProps) {
 
             {/* QR Canvas */}
             <div className="flex justify-center mb-5">
-              <div className="p-4 rounded-2xl" style={{ background: "#FAF6EF" }}>
+              <div className="p-4 rounded-[16px]" style={{ background: "#FAF6EF" }}>
                 <canvas ref={qrCanvasRef} />
               </div>
             </div>
@@ -523,13 +532,13 @@ export function EventControlClient({ event }: EventControlClientProps) {
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);
                 }}
-                className="btn-primary w-full touch-target"
+                className="btn-primary w-full rounded-[12px] touch-target"
               >
                 <LinkIcon className="h-4 w-4" />
                 {copied ? "Link Copied!" : "Copy Join Link"}
               </button>
               <div className="flex gap-2">
-                <button onClick={handleDownloadQR} className="btn-secondary flex-1 touch-target">
+                <button onClick={handleDownloadQR} className="btn-secondary flex-1 rounded-[12px] touch-target">
                   <Download className="h-4 w-4" />
                   Save Image
                 </button>
@@ -544,7 +553,7 @@ export function EventControlClient({ event }: EventControlClientProps) {
                       setTimeout(() => setCopied(false), 2000);
                     }
                   }}
-                  className="btn-secondary flex-1 touch-target"
+                  className="btn-secondary flex-1 rounded-[12px] touch-target"
                 >
                   <Share2 className="h-4 w-4" />
                   Share
