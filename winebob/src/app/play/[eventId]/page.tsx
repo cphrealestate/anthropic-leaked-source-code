@@ -222,7 +222,7 @@ export default function PlayPage({
   if (loading) {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center bg-background">
-        <div className="h-16 w-16 rounded-3xl widget-wine flex items-center justify-center mb-5">
+        <div className="h-16 w-16 rounded-[16px] bg-card-bg border border-card-border shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] flex items-center justify-center mb-5">
           <Wine className="h-8 w-8 text-cherry animate-pulse" />
         </div>
         <p className="text-muted text-[15px] font-medium">Loading tasting...</p>
@@ -233,7 +233,7 @@ export default function PlayPage({
   if (!event) {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center bg-background px-6">
-        <div className="h-16 w-16 rounded-3xl bg-red-50 flex items-center justify-center mb-5">
+        <div className="h-16 w-16 rounded-[16px] bg-red-50 border border-red-200 flex items-center justify-center mb-5">
           <X className="h-8 w-8 text-red-500" />
         </div>
         <p className="text-xl font-bold">Event not found</p>
@@ -248,9 +248,9 @@ export default function PlayPage({
   // ---- STATE 1: Lobby / Waiting ----
   if (event.status === "draft" || event.status === "lobby") {
     return (
-      <div className="fixed inset-0 flex flex-col bg-hero-gradient safe-top safe-bottom">
+      <div className="fixed inset-0 flex flex-col bg-background safe-top safe-bottom">
         {/* Top bar with leave option */}
-        <div className="px-5 pt-5">
+        <div className="px-4 md:px-8 lg:px-10 pt-5">
           <a
             href="/"
             className="inline-flex items-center gap-1 text-[13px] font-semibold text-muted active:text-foreground transition-colors touch-target"
@@ -262,7 +262,7 @@ export default function PlayPage({
 
         <div className="flex-1 flex flex-col items-center justify-center px-6">
           <div className="animate-fade-in-up text-center">
-            <div className="h-20 w-20 rounded-3xl widget-wine flex items-center justify-center mx-auto mb-6">
+            <div className="h-20 w-20 rounded-[16px] bg-card-bg border border-card-border shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] flex items-center justify-center mx-auto mb-6">
               <Wine className="h-10 w-10 text-cherry animate-pulse" />
             </div>
             <h1 className="text-3xl font-bold text-foreground tracking-tight">
@@ -288,15 +288,15 @@ export default function PlayPage({
                 {event.guests.length} guest{event.guests.length !== 1 && "s"} joined
               </span>
             </div>
-            <div className="wine-card divide-y divide-card-border/40">
+            <div className="rounded-[16px] bg-card-bg border border-card-border shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] divide-y divide-card-border/40">
               {event.guests.map((g: GuestParticipant) => (
                 <div
                   key={g.id}
                   className={`flex items-center gap-3 px-4 py-3 ${
-                    g.id === guestId ? "bg-widget-wine/30" : ""
+                    g.id === guestId ? "bg-cherry/5" : ""
                   }`}
                 >
-                  <div className="h-9 w-9 rounded-xl widget-wine flex items-center justify-center text-[13px] font-bold text-cherry">
+                  <div className="h-9 w-9 rounded-[12px] bg-cherry/10 flex items-center justify-center text-[13px] font-bold text-cherry">
                     {g.displayName.charAt(0).toUpperCase()}
                   </div>
                   <span className={`text-[14px] font-medium ${g.id === guestId ? "text-cherry font-semibold" : "text-foreground"}`}>
@@ -324,7 +324,7 @@ export default function PlayPage({
     const actual = currentBlindWine.wine;
     return (
       <div className="fixed inset-0 flex flex-col bg-background safe-top safe-bottom overflow-y-auto">
-        <div className="container-app w-full pt-6 pb-8">
+        <div className="px-4 md:px-8 lg:px-10 pt-6 pb-8">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -332,13 +332,13 @@ export default function PlayPage({
                 Wine #{event.currentWine} — Revealed
               </p>
             </div>
-            <div className="h-10 w-10 rounded-2xl widget-gold flex items-center justify-center">
+            <div className="h-10 w-10 rounded-[16px] bg-amber-50 border border-amber-200 flex items-center justify-center">
               <Sparkles className="h-5 w-5 text-amber-600" />
             </div>
           </div>
 
           {/* Wine name card */}
-          <div className="wine-card p-6 mb-4 animate-scale-in">
+          <div className="rounded-[16px] bg-card-bg border border-card-border shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] p-6 mb-4 animate-scale-in">
             <h2 className="text-2xl font-bold text-foreground tracking-tight mb-1">
               {actual.name}
             </h2>
@@ -349,17 +349,17 @@ export default function PlayPage({
 
           {/* Comparison cards */}
           <div className="space-y-2.5 stagger-children">
-            <RevealCard label="Grape" icon={<Grape className="h-4 w-4" />} actual={actual.grapes.join(", ")} guessed={currentGuess?.guessedGrape} color="widget-wine" />
-            <RevealCard label="Region" icon={<MapPin className="h-4 w-4" />} actual={actual.region} guessed={currentGuess?.guessedRegion} color="widget-gold" />
-            <RevealCard label="Country" icon={<Globe className="h-4 w-4" />} actual={actual.country} guessed={currentGuess?.guessedCountry} color="widget-sky" />
-            <RevealCard label="Vintage" icon={<Clock className="h-4 w-4" />} actual={actual.vintage?.toString() ?? "NV"} guessed={currentGuess?.guessedVintage?.toString()} color="widget-sage" />
-            <RevealCard label="Type" icon={<Wine className="h-4 w-4" />} actual={actual.type} guessed={currentGuess?.guessedType} color="widget-peach" />
-            <RevealCard label="Producer" icon={<Tag className="h-4 w-4" />} actual={actual.producer} guessed={currentGuess?.guessedProducer} color="widget-lavender" />
+            <RevealCard label="Grape" icon={<Grape className="h-4 w-4" />} actual={actual.grapes.join(", ")} guessed={currentGuess?.guessedGrape} />
+            <RevealCard label="Region" icon={<MapPin className="h-4 w-4" />} actual={actual.region} guessed={currentGuess?.guessedRegion} />
+            <RevealCard label="Country" icon={<Globe className="h-4 w-4" />} actual={actual.country} guessed={currentGuess?.guessedCountry} />
+            <RevealCard label="Vintage" icon={<Clock className="h-4 w-4" />} actual={actual.vintage?.toString() ?? "NV"} guessed={currentGuess?.guessedVintage?.toString()} />
+            <RevealCard label="Type" icon={<Wine className="h-4 w-4" />} actual={actual.type} guessed={currentGuess?.guessedType} />
+            <RevealCard label="Producer" icon={<Tag className="h-4 w-4" />} actual={actual.producer} guessed={currentGuess?.guessedProducer} />
           </div>
 
           {/* Score */}
           {currentGuess?.score != null && (
-            <div className="wine-card p-5 mt-4 flex items-center justify-between animate-scale-in">
+            <div className="rounded-[16px] bg-card-bg border border-card-border shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] p-5 mt-4 flex items-center justify-between animate-scale-in">
               <span className="text-[14px] font-medium text-muted">Your score</span>
               <span className="text-3xl font-bold text-cherry tracking-tight">
                 {currentGuess.score} <span className="text-[14px] font-semibold text-muted">pts</span>
@@ -368,7 +368,7 @@ export default function PlayPage({
           )}
 
           {/* Progress indicator */}
-          <div className="wine-card p-4 mt-6 flex items-center gap-3">
+          <div className="rounded-[16px] bg-card-bg border border-card-border shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] p-4 mt-6 flex items-center gap-3">
             <Loader2 className="h-4 w-4 animate-spin text-cherry flex-shrink-0" />
             <div className="flex-1">
               <p className="text-[14px] font-medium text-foreground">
@@ -392,7 +392,7 @@ export default function PlayPage({
   return (
     <div className="fixed inset-0 flex flex-col bg-background safe-top safe-bottom">
       {/* Header */}
-      <div className="container-app w-full pt-5 pb-3 flex items-center justify-between">
+      <div className="px-4 md:px-8 lg:px-10 pt-5 pb-3 flex items-center justify-between">
         <div>
           <p className="text-[11px] font-bold text-muted uppercase tracking-widest">
             {event.title}
@@ -401,19 +401,19 @@ export default function PlayPage({
             Wine #{event.currentWine}
           </h1>
         </div>
-        <div className="h-12 w-12 rounded-2xl widget-wine flex items-center justify-center">
+        <div className="h-12 w-12 rounded-[16px] bg-cherry/10 flex items-center justify-center">
           <Wine className="h-6 w-6 text-cherry" />
         </div>
       </div>
 
       {/* Form */}
       <div className="flex-1 overflow-y-auto scroll-smooth">
-        <div className="container-app pb-32">
+        <div className="px-4 md:px-8 lg:px-10 pb-32">
           {submitted && !editing ? (
             /* ---- Submitted confirmation ---- */
-            <div className="wine-card p-6 animate-scale-in">
+            <div className="rounded-[16px] bg-card-bg border border-card-border shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] p-6 animate-scale-in">
               <div className="flex items-center gap-3 mb-5">
-                <div className="h-10 w-10 rounded-2xl bg-green-50 flex items-center justify-center">
+                <div className="h-10 w-10 rounded-[16px] bg-green-50 border border-green-200 flex items-center justify-center">
                   <Check className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
@@ -466,7 +466,7 @@ export default function PlayPage({
                         onClick={() =>
                           setForm((f) => ({ ...f, type: f.type === t.value ? "" : t.value }))
                         }
-                        className={`touch-target rounded-2xl p-3 text-center transition-all ${
+                        className={`touch-target rounded-[16px] p-3 text-center transition-all ${
                           form.type === t.value
                             ? "bg-cherry text-white shadow-sm ring-2 ring-cherry/30"
                             : "bg-card-bg border border-card-border text-foreground"
@@ -499,10 +499,10 @@ export default function PlayPage({
                         key={g}
                         type="button"
                         onClick={() => setForm((f) => ({ ...f, grape: g }))}
-                        className={`px-3 py-1.5 rounded-xl text-[12px] font-medium transition-all ${
+                        className={`px-3 py-1.5 rounded-[8px] text-[12px] font-medium transition-all ${
                           form.grape === g
                             ? "bg-cherry text-white shadow-sm"
-                            : "bg-widget-wine text-foreground"
+                            : "bg-card-bg border border-card-border text-foreground"
                         }`}
                       >
                         {g}
@@ -534,7 +534,7 @@ export default function PlayPage({
                   <legend className="text-[13px] font-bold text-foreground uppercase tracking-wide mb-2">
                     Country
                   </legend>
-                  <div className="wine-card overflow-hidden">
+                  <div className="rounded-[16px] bg-card-bg border border-card-border shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] overflow-hidden">
                     <select
                       value={form.country}
                       onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))}
@@ -617,7 +617,7 @@ export default function PlayPage({
               </fieldset>
 
               {error && (
-                <div className="wine-card p-3 bg-red-50 border-red-200">
+                <div className="rounded-[16px] bg-red-50 border border-red-200 p-3">
                   <p className="text-red-600 text-[13px] font-medium">{error}</p>
                 </div>
               )}
@@ -629,7 +629,7 @@ export default function PlayPage({
       {/* Sticky submit button — hidden when wine is locked (revealed) */}
       {(!submitted || editing) && !isWineLocked && (
         <div className="fixed bottom-0 left-0 right-0 safe-bottom z-50">
-          <div className="container-app pb-5 pt-3 bg-gradient-to-t from-background via-background to-transparent">
+          <div className="px-4 md:px-8 lg:px-10 pb-5 pt-3 bg-gradient-to-t from-background via-background to-transparent">
             <button
               onClick={handleSubmit}
               disabled={submitting}
@@ -676,13 +676,11 @@ function RevealCard({
   icon,
   actual,
   guessed,
-  color,
 }: {
   label: string;
   icon: React.ReactNode;
   actual: string;
   guessed?: string | null;
-  color: string;
 }) {
   const isMatch =
     guessed != null &&
@@ -690,8 +688,8 @@ function RevealCard({
     actual.toLowerCase().includes(guessed.toLowerCase());
 
   return (
-    <div className="wine-card p-4 flex items-center gap-3.5">
-      <div className={`h-10 w-10 rounded-xl ${color} flex items-center justify-center flex-shrink-0 ${
+    <div className="rounded-[16px] bg-card-bg border border-card-border shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] p-4 flex items-center gap-3.5">
+      <div className={`h-10 w-10 rounded-[12px] bg-card-bg border border-card-border flex items-center justify-center flex-shrink-0 ${
         !guessed ? "text-muted/40" : isMatch ? "text-green-600" : "text-red-500"
       }`}>
         {icon}
@@ -759,11 +757,11 @@ function CompletedView({
   ];
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-hero-gradient safe-top safe-bottom overflow-y-auto">
-      <div className="container-app w-full pt-8 pb-8">
+    <div className="fixed inset-0 flex flex-col bg-background safe-top safe-bottom overflow-y-auto">
+      <div className="px-4 md:px-8 lg:px-10 pt-8 pb-8">
         {/* Trophy header */}
         <div className="text-center mb-8 animate-fade-in-up">
-          <div className="h-20 w-20 rounded-3xl widget-gold flex items-center justify-center mx-auto mb-5 animate-cheers">
+          <div className="h-20 w-20 rounded-[16px] bg-amber-50 border border-amber-200 flex items-center justify-center mx-auto mb-5 animate-cheers">
             <Trophy className="h-10 w-10 text-amber-600" />
           </div>
           <h1 className="text-3xl font-bold text-foreground tracking-tight">Tasting Complete!</h1>
@@ -779,15 +777,15 @@ function CompletedView({
         <h2 className="text-[13px] font-bold text-foreground uppercase tracking-wide mb-3">
           Scoreboard
         </h2>
-        <div className="wine-card divide-y divide-card-border/40">
+        <div className="rounded-[16px] bg-card-bg border border-card-border shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] divide-y divide-card-border/40">
           {ranked.map((g, i) => (
             <div
               key={g.id}
               className={`flex items-center gap-3.5 px-4 py-3.5 ${
-                g.id === guestId ? "bg-widget-wine/30" : ""
+                g.id === guestId ? "bg-cherry/5" : ""
               }`}
             >
-              <div className={`h-9 w-9 rounded-xl flex items-center justify-center text-[13px] font-bold flex-shrink-0 ${
+              <div className={`h-9 w-9 rounded-[12px] flex items-center justify-center text-[13px] font-bold flex-shrink-0 ${
                 i < 3 ? MEDAL_COLORS[i] : "bg-card-border/30 text-muted"
               }`}>
                 {i === 0 ? <Crown className="h-4 w-4" /> : i + 1}
