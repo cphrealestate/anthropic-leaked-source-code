@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Plus, Users, Wine, Clock, Copy, ChevronRight, Sparkles } from "lucide-react";
+import { Plus, Users, Wine, Copy, ChevronRight, Sparkles, Trophy, Calendar } from "lucide-react";
 import { useState } from "react";
 
 type Event = {
@@ -32,36 +32,22 @@ type ArenaClientProps = {
   userName: string;
 };
 
-const STATUS_CONFIG: Record<string, { label: string; dot: string; bg: string }> = {
-  draft: { label: "Draft", dot: "bg-gray-400", bg: "bg-gray-100 text-gray-600" },
-  lobby: { label: "Waiting", dot: "bg-amber-400", bg: "bg-amber-50 text-amber-700" },
-  live: { label: "Live", dot: "bg-green-500 animate-pulse", bg: "bg-green-50 text-green-700" },
-  revealing: { label: "Revealing", dot: "bg-purple-500", bg: "bg-purple-50 text-purple-700" },
-  completed: { label: "Done", dot: "bg-gray-300", bg: "bg-gray-50 text-gray-500" },
+const STATUS_CONFIG: Record<string, { label: string; dot: string }> = {
+  draft: { label: "Draft", dot: "bg-gray-400" },
+  lobby: { label: "Waiting", dot: "bg-amber-400 animate-pulse" },
+  live: { label: "Live", dot: "bg-green-500 animate-pulse" },
+  revealing: { label: "Revealing", dot: "bg-purple-500 animate-pulse" },
+  completed: { label: "Completed", dot: "bg-muted" },
 };
 
-const DIFFICULTY_EMOJI: Record<string, string> = {
-  beginner: "🟢",
-  intermediate: "🟡",
-  advanced: "🔴",
-  expert: "⚫",
-};
-
-function StatusBadge({ status }: { status: string }) {
+function StatusDot({ status }: { status: string }) {
   const config = STATUS_CONFIG[status] ?? STATUS_CONFIG.draft;
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${config.bg}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${config.dot}`} />
+    <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted">
+      <span className={`h-2 w-2 rounded-full ${config.dot}`} />
       {config.label}
     </span>
   );
-}
-
-function formatDate(date: Date) {
-  return new Date(date).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
 }
 
 function JoinCodeDisplay({ code }: { code: string }) {
@@ -78,154 +64,219 @@ function JoinCodeDisplay({ code }: { code: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="inline-flex items-center gap-1.5 rounded-lg bg-butter-dark/40 px-2.5 py-1 font-mono text-xs font-bold tracking-[0.2em] text-cherry"
+      className="inline-flex items-center gap-1.5 font-mono text-xs font-bold tracking-[0.2em] text-cherry/80 active:text-cherry"
       aria-label={`Copy join code ${code}`}
     >
-      {code}
-      <Copy className="h-3 w-3 opacity-50" />
-      {copied && (
-        <span className="text-[10px] font-sans font-normal text-green-600 tracking-normal">
+      {copied ? (
+        <span className="text-[11px] font-sans font-semibold text-green-600 tracking-normal">
           Copied!
         </span>
+      ) : (
+        <>
+          {code}
+          <Copy className="h-3 w-3 opacity-40" />
+        </>
       )}
     </button>
   );
 }
 
+function timeAgo(date: Date) {
+  const now = new Date();
+  const d = new Date(date);
+  const diff = Math.floor((now.getTime() - d.getTime()) / 1000);
+  if (diff < 60) return "Just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 export function ArenaClient({ events, templates, userName }: ArenaClientProps) {
   const firstName = userName.split(" ")[0];
 
+  // Stats
+  const totalEvents = events.length;
+  const totalWines = events.reduce((sum, e) => sum + e.wines.length, 0);
+  const totalGuests = events.reduce((sum, e) => sum + e.guests.length, 0);
+  const liveEvents = events.filter((e) => e.status === "live" || e.status === "lobby");
+
   return (
-    <div className="min-h-screen pb-28 safe-top">
-      {/* Hero header with gradient */}
-      <header className="px-5 pt-8 pb-6 bg-gradient-to-b from-cherry to-cherry-dark text-white relative overflow-hidden">
-        {/* Decorative circles */}
-        <div className="absolute top-[-40px] right-[-30px] w-32 h-32 rounded-full bg-white/5" />
-        <div className="absolute bottom-[-20px] left-[-20px] w-24 h-24 rounded-full bg-white/5" />
+    <div className="min-h-screen pb-28 safe-top bg-background">
+      {/* ── Header ── */}
+      <div className="px-5 pt-8 pb-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="font-serif text-[26px] font-bold text-foreground leading-tight">
+              {firstName}
+            </h1>
+            <p className="text-sm text-muted mt-0.5">Host Dashboard</p>
+          </div>
+          <Link
+            href="/arena/create"
+            className="h-11 w-11 rounded-full bg-cherry flex items-center justify-center shadow-lg shadow-cherry/25 active:scale-90 transition-transform"
+          >
+            <Plus className="h-5 w-5 text-white" strokeWidth={2.5} />
+          </Link>
+        </div>
 
-        <p className="text-white/70 text-sm font-medium">Welcome back</p>
-        <h1 className="font-serif text-2xl font-bold mt-0.5">
-          {firstName} 🍷
-        </h1>
-
-        {/* Create button */}
-        <Link
-          href="/arena/create"
-          className="mt-5 flex items-center justify-center gap-2 w-full py-3.5 bg-white text-cherry rounded-2xl font-semibold text-[15px] shadow-lg shadow-black/10 active:scale-[0.97] transition-transform"
-        >
-          <Plus className="h-5 w-5" strokeWidth={2.5} />
-          New Blind Tasting
-        </Link>
-      </header>
-
-      <div className="px-5">
-        {/* Templates */}
-        {templates.length > 0 && (
-          <section className="mt-6">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-serif text-lg font-bold text-foreground">
-                Quick Start
-              </h2>
-              <span className="text-xs text-muted flex items-center gap-0.5">
-                Swipe <ChevronRight className="h-3 w-3" />
-              </span>
-            </div>
-            <div className="flex gap-3 overflow-x-auto pb-3 -mx-5 px-5 scroll-smooth snap-x snap-mandatory scrollbar-hide">
-              {templates.map((template, i) => (
-                <Link
-                  key={template.id}
-                  href={`/arena/create?template=${template.id}`}
-                  className="flex-shrink-0 w-44 snap-start rounded-2xl border border-card-border bg-card-bg p-4 active:scale-[0.96] transition-all shadow-sm hover:shadow-md"
-                  style={{ animationDelay: `${i * 50}ms` }}
-                >
-                  <div className="text-2xl mb-2">
-                    {DIFFICULTY_EMOJI[template.difficulty] ?? "🟡"}
-                  </div>
-                  <h3 className="font-serif font-bold text-sm text-foreground leading-tight line-clamp-2">
-                    {template.name}
-                  </h3>
-                  {template.description && (
-                    <p className="mt-1.5 text-[11px] text-muted line-clamp-2 leading-relaxed">
-                      {template.description}
-                    </p>
-                  )}
-                  <div className="mt-3 flex items-center gap-1.5 text-[11px] text-muted">
-                    <Wine className="h-3 w-3" />
-                    <span>{template.wineCount} wines</span>
-                    <span className="text-card-border">·</span>
-                    <span className="capitalize">{template.difficulty}</span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Events */}
-        <section className="mt-8">
-          <h2 className="font-serif text-lg font-bold text-foreground mb-3">
-            Your Tastings
-          </h2>
-
-          {events.length === 0 ? (
-            <div className="rounded-2xl border-2 border-dashed border-card-border flex flex-col items-center justify-center py-14 px-6 text-center">
-              <div className="w-16 h-16 rounded-full bg-butter-dark/30 flex items-center justify-center mb-4">
-                <Sparkles className="h-7 w-7 text-cherry/40" />
-              </div>
-              <p className="font-serif text-base font-bold text-foreground">
-                No tastings yet
-              </p>
-              <p className="mt-1.5 text-sm text-muted max-w-[220px]">
-                Create your first event and share the code with friends.
-              </p>
-              <Link
-                href="/arena/create"
-                className="mt-5 px-5 py-2.5 bg-cherry text-white text-sm font-semibold rounded-xl active:scale-[0.97] transition-transform"
-              >
-                Get started
-              </Link>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {events.map((event) => (
-                <Link
-                  key={event.id}
-                  href={`/arena/event/${event.id}`}
-                  className="rounded-2xl border border-card-border bg-card-bg p-4 active:scale-[0.98] transition-transform block shadow-sm"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-serif font-bold text-[15px] text-foreground leading-tight truncate">
-                        {event.title}
-                      </h3>
-                      <div className="mt-2">
-                        <JoinCodeDisplay code={event.joinCode} />
-                      </div>
-                    </div>
-                    <StatusBadge status={event.status} />
-                  </div>
-
-                  <div className="mt-3 pt-3 border-t border-card-border/60 flex items-center gap-4 text-xs text-muted">
-                    <span className="inline-flex items-center gap-1">
-                      <Wine className="h-3.5 w-3.5" />
-                      {event.wines.length}
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <Users className="h-3.5 w-3.5" />
-                      {event.guests.length}
-                    </span>
-                    <span className="inline-flex items-center gap-1 ml-auto">
-                      <Clock className="h-3.5 w-3.5" />
-                      {formatDate(event.createdAt)}
-                    </span>
-                    <ChevronRight className="h-4 w-4 text-muted/50" />
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
+        {/* ── Stats Row (Strava-style) ── */}
+        <div className="mt-5 flex items-stretch gap-2">
+          <div className="flex-1 rounded-2xl bg-card-bg border border-card-border p-3 text-center">
+            <p className="text-2xl font-bold text-foreground font-serif">{totalEvents}</p>
+            <p className="text-[10px] font-semibold text-muted uppercase tracking-wider mt-0.5">Tastings</p>
+          </div>
+          <div className="flex-1 rounded-2xl bg-card-bg border border-card-border p-3 text-center">
+            <p className="text-2xl font-bold text-cherry font-serif">{totalWines}</p>
+            <p className="text-[10px] font-semibold text-muted uppercase tracking-wider mt-0.5">Wines</p>
+          </div>
+          <div className="flex-1 rounded-2xl bg-card-bg border border-card-border p-3 text-center">
+            <p className="text-2xl font-bold text-foreground font-serif">{totalGuests}</p>
+            <p className="text-[10px] font-semibold text-muted uppercase tracking-wider mt-0.5">Guests</p>
+          </div>
+        </div>
       </div>
+
+      {/* ── Live / Active Events (Strava "In Progress" style) ── */}
+      {liveEvents.length > 0 && (
+        <div className="px-5 mb-5">
+          {liveEvents.map((event) => (
+            <Link
+              key={event.id}
+              href={`/arena/event/${event.id}`}
+              className="block rounded-2xl bg-gradient-to-br from-cherry to-cherry-dark p-5 text-white shadow-lg shadow-cherry/20 active:scale-[0.98] transition-transform"
+            >
+              <div className="flex items-center gap-2 mb-3">
+                <span className="h-2.5 w-2.5 rounded-full bg-white animate-pulse" />
+                <span className="text-xs font-bold uppercase tracking-wider text-white/80">
+                  {event.status === "live" ? "Live Now" : "Waiting for guests"}
+                </span>
+              </div>
+              <h3 className="font-serif font-bold text-xl leading-tight">
+                {event.title}
+              </h3>
+              <div className="mt-4 flex items-center gap-5">
+                <div>
+                  <p className="text-2xl font-bold">{event.wines.length}</p>
+                  <p className="text-[10px] text-white/60 font-medium uppercase tracking-wider">Wines</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{event.guests.length}</p>
+                  <p className="text-[10px] text-white/60 font-medium uppercase tracking-wider">Guests</p>
+                </div>
+                <div className="ml-auto font-mono text-lg font-bold tracking-[0.15em] bg-white/15 rounded-xl px-3 py-1.5">
+                  {event.joinCode}
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {/* ── Templates (Strava "Suggested Routes" style) ── */}
+      {templates.length > 0 && (
+        <section className="mb-6">
+          <div className="flex items-center justify-between px-5 mb-3">
+            <h2 className="font-serif text-base font-bold text-foreground">
+              Start a Tasting
+            </h2>
+          </div>
+          <div className="flex gap-2.5 overflow-x-auto pb-2 px-5 scroll-smooth snap-x snap-mandatory scrollbar-hide">
+            {templates.map((template) => (
+              <Link
+                key={template.id}
+                href={`/arena/create?template=${template.id}`}
+                className="flex-shrink-0 w-36 snap-start rounded-2xl border border-card-border bg-card-bg p-3.5 active:scale-[0.95] transition-all"
+              >
+                <div className="w-9 h-9 rounded-xl bg-butter-dark/40 flex items-center justify-center mb-2.5">
+                  <Wine className="h-4 w-4 text-cherry" />
+                </div>
+                <h3 className="font-serif font-bold text-[13px] text-foreground leading-tight line-clamp-2">
+                  {template.name}
+                </h3>
+                <p className="mt-1.5 text-[10px] text-muted leading-relaxed line-clamp-2">
+                  {template.description}
+                </p>
+                <div className="mt-2 text-[10px] font-semibold text-muted">
+                  {template.wineCount} wines · {template.difficulty}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Activity Feed (past events as Strava activities) ── */}
+      <section className="px-5">
+        <h2 className="font-serif text-base font-bold text-foreground mb-3">
+          Activity
+        </h2>
+
+        {events.length === 0 ? (
+          <div className="rounded-2xl border-2 border-dashed border-card-border/60 flex flex-col items-center justify-center py-16 px-6 text-center">
+            <div className="w-14 h-14 rounded-full bg-butter-dark/30 flex items-center justify-center mb-3">
+              <Sparkles className="h-6 w-6 text-cherry/30" />
+            </div>
+            <p className="font-serif text-base font-bold text-foreground">
+              Your tastings will appear here
+            </p>
+            <p className="mt-1 text-sm text-muted">
+              Like a feed of all your wine adventures.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {events
+              .filter((e) => e.status !== "live" && e.status !== "lobby")
+              .map((event) => (
+              <Link
+                key={event.id}
+                href={`/arena/event/${event.id}`}
+                className="block rounded-2xl border border-card-border bg-card-bg overflow-hidden active:scale-[0.98] transition-transform"
+              >
+                {/* Activity header */}
+                <div className="px-4 pt-3.5 pb-3 flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-cherry/10 flex items-center justify-center flex-shrink-0">
+                    <Trophy className="h-4 w-4 text-cherry" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-serif font-bold text-[14px] text-foreground leading-tight truncate">
+                      {event.title}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <StatusDot status={event.status} />
+                      <span className="text-[11px] text-muted">·</span>
+                      <span className="text-[11px] text-muted flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        {timeAgo(event.createdAt)}
+                      </span>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted/40 flex-shrink-0" />
+                </div>
+
+                {/* Activity stats bar (Strava-style) */}
+                <div className="px-4 py-3 bg-butter-dark/15 border-t border-card-border/40 flex items-center">
+                  <div className="flex-1 text-center">
+                    <p className="text-lg font-bold text-foreground font-serif">{event.wines.length}</p>
+                    <p className="text-[9px] font-semibold text-muted uppercase tracking-wider">Wines</p>
+                  </div>
+                  <div className="w-px h-8 bg-card-border/60" />
+                  <div className="flex-1 text-center">
+                    <p className="text-lg font-bold text-foreground font-serif">{event.guests.length}</p>
+                    <p className="text-[9px] font-semibold text-muted uppercase tracking-wider">Guests</p>
+                  </div>
+                  <div className="w-px h-8 bg-card-border/60" />
+                  <div className="flex-1 text-center">
+                    <JoinCodeDisplay code={event.joinCode} />
+                    <p className="text-[9px] font-semibold text-muted uppercase tracking-wider mt-0.5">Code</p>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
