@@ -191,4 +191,69 @@ const templates = [
   },
 ];
 
-export { wines, templates };
+// ============ RUN SEED ============
+
+import { PrismaClient } from "../src/generated/prisma/client";
+import { Pool } from "@neondatabase/serverless";
+import { PrismaNeon } from "@prisma/adapter-neon";
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = new PrismaNeon(pool);
+const prisma = new PrismaClient({ adapter } as any);
+
+async function main() {
+  console.log("Seeding wines...");
+  for (const wine of wines) {
+    await prisma.wine.upsert({
+      where: {
+        id: wine.name.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 30),
+      },
+      update: {},
+      create: {
+        id: wine.name.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 30),
+        name: wine.name,
+        producer: wine.producer,
+        vintage: wine.vintage,
+        grapes: wine.grapes,
+        region: wine.region,
+        country: wine.country,
+        appellation: wine.appellation ?? undefined,
+        type: wine.type,
+      },
+    });
+  }
+  console.log(`Seeded ${wines.length} wines.`);
+
+  console.log("Seeding templates...");
+  for (const t of templates) {
+    await prisma.eventTemplate.upsert({
+      where: {
+        id: t.name.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 30),
+      },
+      update: {},
+      create: {
+        id: t.name.toLowerCase().replace(/[^a-z0-9]/g, "-").slice(0, 30),
+        name: t.name,
+        description: t.description,
+        theme: t.theme,
+        difficulty: t.difficulty,
+        wineCount: t.wineCount,
+        guessFields: t.guessFields,
+        category: t.category,
+        scoringConfig: t.scoringConfig,
+        suggestedWines: t.suggestedWines,
+        isPublic: true,
+        featured: true,
+      },
+    });
+  }
+  console.log(`Seeded ${templates.length} templates.`);
+}
+
+main()
+  .then(() => prisma.$disconnect())
+  .catch((e) => {
+    console.error(e);
+    prisma.$disconnect();
+    process.exit(1);
+  });
