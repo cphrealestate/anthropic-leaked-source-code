@@ -193,11 +193,15 @@ const templates = [
 
 // ============ RUN SEED ============
 
+import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { Pool } from "@neondatabase/serverless";
 import { PrismaNeon } from "@prisma/adapter-neon";
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const dbUrl = process.env.DATABASE_URL;
+console.log("DATABASE_URL set:", !!dbUrl, dbUrl ? dbUrl.substring(0, 30) + "..." : "MISSING");
+
+const pool = new Pool({ connectionString: dbUrl });
 const adapter = new PrismaNeon(pool);
 const prisma = new PrismaClient({ adapter } as any);
 
