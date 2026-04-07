@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, Plus, Wine, Heart, MapPin, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Plus, Wine, Heart, MapPin, ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toggleFavorite } from "@/lib/actions";
 
@@ -33,20 +33,42 @@ type WinesClientProps = {
 };
 
 const WINE_TYPES = [
-  { value: "red", label: "Red", emoji: "🔴" },
-  { value: "white", label: "White", emoji: "⚪" },
-  { value: "rosé", label: "Rosé", emoji: "🩷" },
-  { value: "sparkling", label: "Sparkling", emoji: "✨" },
-  { value: "orange", label: "Orange", emoji: "🟠" },
-  { value: "dessert", label: "Dessert", emoji: "🍯" },
+  { value: "red", label: "Red", color: "#8B1A2A" },
+  { value: "white", label: "White", color: "#D4B86A" },
+  { value: "rosé", label: "Rosé", color: "#D4828A" },
+  { value: "sparkling", label: "Sparkling", color: "#C8B868" },
+  { value: "orange", label: "Orange", color: "#C8864A" },
+  { value: "dessert", label: "Dessert", color: "#A88040" },
 ];
 
-const PRICE_RANGES = [
-  { value: "budget", label: "Budget", emoji: "💰" },
-  { value: "mid", label: "Mid-range", emoji: "💰💰" },
-  { value: "premium", label: "Premium", emoji: "💰💰💰" },
-  { value: "luxury", label: "Luxury", emoji: "👑" },
-];
+const PRICE_LABELS: Record<string, string> = {
+  budget: "Under $15",
+  mid: "$15–40",
+  premium: "$40–100",
+  luxury: "$100+",
+};
+
+function typeGradient(type: string): string {
+  switch (type.toLowerCase()) {
+    case "red": return "from-[#3D1018] to-[#1A0A0C]";
+    case "white": return "from-[#F5ECD0] to-[#E8DDB8]";
+    case "rosé": return "from-[#F0D0D4] to-[#E0B8BC]";
+    case "sparkling": return "from-[#F8F0D0] to-[#E8DDB0]";
+    case "orange": return "from-[#F0D8C0] to-[#E0C4A8]";
+    default: return "from-[#E8E0D0] to-[#D8CFC0]";
+  }
+}
+
+function typeTextColor(type: string): string {
+  switch (type.toLowerCase()) {
+    case "red": return "text-[#F4E4E6]";
+    case "white": return "text-[#6B5A30]";
+    case "rosé": return "text-[#6B3040]";
+    case "sparkling": return "text-[#6B5A20]";
+    case "orange": return "text-[#6B4020]";
+    default: return "text-stone";
+  }
+}
 
 function buildQuery(params: Record<string, string | undefined>) {
   const q = new URLSearchParams();
@@ -57,43 +79,18 @@ function buildQuery(params: Record<string, string | undefined>) {
   return str ? `?${str}` : "";
 }
 
-function typeColor(type: string) {
-  switch (type.toLowerCase()) {
-    case "red": return "bg-red-500";
-    case "white": return "bg-amber-200";
-    case "rosé": return "bg-pink-300";
-    case "sparkling": return "bg-yellow-300";
-    case "orange": return "bg-orange-300";
-    case "dessert": return "bg-amber-400";
-    default: return "bg-gray-300";
-  }
-}
-
 export function WinesClient({
-  wines,
-  total,
-  pages,
-  currentPage,
-  countries,
-  activeType,
-  activeCountry,
-  activePriceRange,
-  activeSearch,
+  wines, total, pages, currentPage, countries,
+  activeType, activeCountry, activePriceRange, activeSearch,
 }: WinesClientProps) {
   const router = useRouter();
   const [search, setSearch] = useState(activeSearch ?? "");
   const [favSet, setFavSet] = useState<Set<string>>(new Set());
+  const [showFilters, setShowFilters] = useState(false);
   const [, startTransition] = useTransition();
 
   function navigate(overrides: Record<string, string | undefined>) {
-    const params = {
-      type: activeType,
-      country: activeCountry,
-      priceRange: activePriceRange,
-      search: activeSearch,
-      page: undefined, // reset page on filter change
-      ...overrides,
-    };
+    const params = { type: activeType, country: activeCountry, priceRange: activePriceRange, search: activeSearch, page: undefined, ...overrides };
     router.push(`/wines${buildQuery(params)}`);
   }
 
@@ -105,174 +102,162 @@ export function WinesClient({
   function handleToggleFav(wineId: string) {
     startTransition(async () => {
       const result = await toggleFavorite(wineId);
-      setFavSet((prev) => {
-        const next = new Set(prev);
-        if (result.favorited) next.add(wineId);
-        else next.delete(wineId);
-        return next;
-      });
+      setFavSet((prev) => { const next = new Set(prev); if (result.favorited) next.add(wineId); else next.delete(wineId); return next; });
     });
   }
 
-  const hasFilters = activeType || activeCountry || activePriceRange || activeSearch;
+  const hasFilters = !!(activeType || activeCountry || activePriceRange || activeSearch);
 
   return (
     <div className="min-h-screen pb-28 safe-top bg-background">
       {/* Header */}
-      <div className="px-5 pt-8 pb-2">
-        <div className="flex items-center justify-between">
+      <div className="container-wide pt-8 pb-4">
+        <div className="flex items-end justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">
-              Wines
-            </h1>
-            <p className="text-[13px] text-muted mt-0.5">{total} wines in library</p>
+            <p className="label mb-1">Wine Library</p>
+            <h1 className="heading-xl text-foreground">{total} Wines</h1>
           </div>
           <Link
             href="/wines/add"
-            className="h-11 w-11 rounded-2xl bg-cherry flex items-center justify-center float-action active:scale-90 transition-transform"
+            className="h-11 w-11 rounded-xl bg-cherry flex items-center justify-center float-action active:scale-90 transition-transform"
           >
             <Plus className="h-5 w-5 text-white" strokeWidth={2.5} />
           </Link>
         </div>
 
-        {/* Search */}
-        <form onSubmit={handleSearch} className="mt-5 relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted/50 pointer-events-none" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search wines, producers, regions..."
-            className="input-field w-full pl-12 pr-4 touch-target"
-          />
-        </form>
-      </div>
-
-      {/* Type filters */}
-      <div className="flex gap-2 overflow-x-auto px-5 pt-4 pb-2 scrollbar-hide">
-        <button
-          onClick={() => navigate({ type: undefined })}
-          className={`flex-shrink-0 px-3.5 py-2 rounded-xl text-[13px] font-medium transition-all ${
-            !activeType
-              ? "bg-cherry text-white shadow-sm"
-              : "bg-card-bg border border-card-border text-foreground"
-          }`}
-        >
-          All
-        </button>
-        {WINE_TYPES.map((t) => (
+        {/* Search + filter toggle */}
+        <div className="flex gap-2">
+          <form onSubmit={handleSearch} className="flex-1 relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-light pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search wines, producers, regions..."
+              className="input-field w-full pl-10 pr-4 text-[14px] touch-target"
+            />
+          </form>
           <button
-            key={t.value}
-            onClick={() => navigate({ type: activeType === t.value ? undefined : t.value })}
-            className={`flex-shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-[13px] font-medium transition-all ${
-              activeType === t.value
-                ? "bg-cherry text-white shadow-sm"
-                : "bg-card-bg border border-card-border text-foreground"
+            onClick={() => setShowFilters(!showFilters)}
+            className={`h-[44px] w-[44px] rounded-xl flex items-center justify-center transition-colors ${
+              showFilters || hasFilters ? "bg-cherry text-white" : "bg-card-bg border border-card-border text-stone"
             }`}
           >
-            <span>{t.emoji}</span>{t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Country + Price filters */}
-      <div className="flex gap-2 px-5 py-2">
-        <select
-          value={activeCountry ?? ""}
-          onChange={(e) => navigate({ country: e.target.value || undefined })}
-          className="input-field text-[13px] py-2 px-3 flex-1"
-        >
-          <option value="">All countries</option>
-          {countries.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
-        <select
-          value={activePriceRange ?? ""}
-          onChange={(e) => navigate({ priceRange: e.target.value || undefined })}
-          className="input-field text-[13px] py-2 px-3 flex-1"
-        >
-          <option value="">Any price</option>
-          {PRICE_RANGES.map((p) => (
-            <option key={p.value} value={p.value}>{p.label}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Clear filters */}
-      {hasFilters && (
-        <div className="px-5 py-2">
-          <button
-            onClick={() => router.push("/wines")}
-            className="text-[12px] font-semibold text-cherry active:opacity-70"
-          >
-            Clear all filters
+            <SlidersHorizontal className="h-4 w-4" />
           </button>
         </div>
-      )}
+
+        {/* Filter panel */}
+        {showFilters && (
+          <div className="mt-3 wine-card p-4 animate-scale-in">
+            {/* Type chips */}
+            <p className="label mb-2">Type</p>
+            <div className="flex gap-1.5 flex-wrap mb-4">
+              {WINE_TYPES.map((t) => (
+                <button
+                  key={t.value}
+                  onClick={() => navigate({ type: activeType === t.value ? undefined : t.value })}
+                  className={`chip text-[12px] ${activeType === t.value ? "chip-active" : ""}`}
+                >
+                  <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ background: t.color }} />
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Country + Price */}
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <p className="label mb-1.5">Country</p>
+                <select
+                  value={activeCountry ?? ""}
+                  onChange={(e) => navigate({ country: e.target.value || undefined })}
+                  className="input-field w-full text-[13px] py-2.5"
+                >
+                  <option value="">All</option>
+                  {countries.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div className="flex-1">
+                <p className="label mb-1.5">Price</p>
+                <select
+                  value={activePriceRange ?? ""}
+                  onChange={(e) => navigate({ priceRange: e.target.value || undefined })}
+                  className="input-field w-full text-[13px] py-2.5"
+                >
+                  <option value="">Any</option>
+                  <option value="budget">Budget</option>
+                  <option value="mid">Mid-range</option>
+                  <option value="premium">Premium</option>
+                  <option value="luxury">Luxury</option>
+                </select>
+              </div>
+            </div>
+
+            {hasFilters && (
+              <button onClick={() => { router.push("/wines"); setShowFilters(false); }} className="mt-3 text-[12px] font-semibold text-cherry">
+                Clear all filters
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Wine grid */}
-      <div className="px-5 mt-2">
+      <div className="container-wide">
         {wines.length === 0 ? (
-          <div className="wine-card flex flex-col items-center justify-center py-16 px-6 text-center">
-            <div className="h-16 w-16 rounded-3xl widget-gold flex items-center justify-center mb-4">
-              <Wine className="h-7 w-7 text-amber-600/40" />
-            </div>
-            <p className="text-[17px] font-bold text-foreground">No wines found</p>
-            <p className="mt-2 text-[14px] text-muted">
-              Try adjusting your filters or search.
-            </p>
+          <div className="wine-card flex flex-col items-center justify-center py-20 text-center">
+            <Wine className="h-10 w-10 text-stone-light mb-3" />
+            <p className="heading-md text-foreground">No wines found</p>
+            <p className="body-sm mt-1">Try adjusting your filters.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
             {wines.map((wine) => (
               <Link
                 key={wine.id}
                 href={`/wines/${wine.id}`}
-                className="wine-card overflow-hidden active:scale-[0.97] transition-transform"
+                className="group block rounded-2xl overflow-hidden active:scale-[0.97] transition-transform"
               >
-                {/* Label image or color block */}
-                <div className={`h-28 flex items-center justify-center ${
-                  wine.labelImage ? "" : "bg-gradient-to-br from-widget-wine to-widget-wine-strong"
-                }`}>
+                {/* Bottle visual */}
+                <div className={`aspect-[3/4] relative bg-gradient-to-b ${typeGradient(wine.type)} flex items-center justify-center p-4`}>
                   {wine.labelImage ? (
-                    <img src={wine.labelImage} alt="" className="w-full h-full object-cover" />
+                    <img src={wine.labelImage} alt="" className="w-full h-full object-contain drop-shadow-lg" />
                   ) : (
-                    <div className="flex flex-col items-center gap-1">
-                      <div className={`h-4 w-4 rounded-full ${typeColor(wine.type)}`} />
-                      <span className="text-[11px] font-semibold text-cherry/50 capitalize">{wine.type}</span>
+                    /* Elegant bottle silhouette */
+                    <div className="flex flex-col items-center">
+                      <svg width="48" height="120" viewBox="0 0 48 120" className="opacity-20">
+                        <rect x="18" y="0" width="12" height="20" rx="3" fill="currentColor" className={typeTextColor(wine.type)} />
+                        <rect x="20" y="18" width="8" height="8" fill="currentColor" className={typeTextColor(wine.type)} />
+                        <path d="M20 26 C20 26 12 40 12 52 L12 110 C12 115 17 120 24 120 C31 120 36 115 36 110 L36 52 C36 40 28 26 28 26 Z" fill="currentColor" className={typeTextColor(wine.type)} />
+                      </svg>
                     </div>
+                  )}
+
+                  {/* Favorite button */}
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleToggleFav(wine.id); }}
+                    className="absolute top-3 right-3 h-8 w-8 rounded-full bg-black/20 backdrop-blur-sm flex items-center justify-center"
+                  >
+                    <Heart className={`h-3.5 w-3.5 ${favSet.has(wine.id) ? "fill-white text-white" : "text-white/70"}`} />
+                  </button>
+
+                  {/* Price badge */}
+                  {wine.priceRange && (
+                    <span className="absolute bottom-3 left-3 text-[10px] font-semibold px-2 py-1 rounded-md bg-black/20 backdrop-blur-sm text-white/80">
+                      {PRICE_LABELS[wine.priceRange] ?? wine.priceRange}
+                    </span>
                   )}
                 </div>
 
-                <div className="p-3">
-                  <div className="flex items-start justify-between gap-1">
-                    <h3 className="font-bold text-[13px] text-foreground leading-tight line-clamp-2 flex-1">
-                      {wine.name}
-                    </h3>
-                    <button
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleToggleFav(wine.id); }}
-                      className="flex-shrink-0 p-1"
-                    >
-                      <Heart
-                        className={`h-4 w-4 transition-colors ${
-                          favSet.has(wine.id) ? "fill-cherry text-cherry" : "text-muted/30"
-                        }`}
-                      />
-                    </button>
-                  </div>
-                  <p className="text-[11px] text-muted mt-1 line-clamp-1">
-                    {wine.producer}{wine.vintage ? ` · ${wine.vintage}` : ""}
-                  </p>
+                {/* Info */}
+                <div className="p-3 bg-card-bg border border-t-0 border-card-border rounded-b-2xl">
+                  <h3 className="heading-sm text-foreground leading-tight line-clamp-1">{wine.name}</h3>
+                  <p className="body-sm mt-0.5 line-clamp-1">{wine.producer}{wine.vintage ? ` · ${wine.vintage}` : ""}</p>
                   <div className="flex items-center gap-1 mt-1.5">
-                    <MapPin className="h-3 w-3 text-muted/50" />
-                    <span className="text-[10px] text-muted line-clamp-1">{wine.region}, {wine.country}</span>
+                    <MapPin className="h-3 w-3 text-stone-light" />
+                    <span className="caption line-clamp-1">{wine.region}, {wine.country}</span>
                   </div>
-                  {wine.priceRange && (
-                    <span className="mt-2 inline-block text-[10px] font-semibold capitalize text-cherry bg-widget-wine px-2 py-0.5 rounded-lg">
-                      {wine.priceRange}
-                    </span>
-                  )}
                 </div>
               </Link>
             ))}
@@ -281,21 +266,19 @@ export function WinesClient({
 
         {/* Pagination */}
         {pages > 1 && (
-          <div className="flex items-center justify-center gap-4 mt-6">
+          <div className="flex items-center justify-center gap-4 mt-8 mb-4">
             <button
               onClick={() => navigate({ page: String(Math.max(1, currentPage - 1)) })}
               disabled={currentPage <= 1}
-              className="btn-secondary px-4 py-2 text-[13px] disabled:opacity-30"
+              className="btn-secondary px-4 py-2.5 text-[13px] disabled:opacity-30"
             >
               <ChevronLeft className="h-4 w-4" /> Prev
             </button>
-            <span className="text-[13px] font-semibold text-muted">
-              {currentPage} / {pages}
-            </span>
+            <span className="body-sm font-semibold">{currentPage} / {pages}</span>
             <button
               onClick={() => navigate({ page: String(Math.min(pages, currentPage + 1)) })}
               disabled={currentPage >= pages}
-              className="btn-secondary px-4 py-2 text-[13px] disabled:opacity-30"
+              className="btn-secondary px-4 py-2.5 text-[13px] disabled:opacity-30"
             >
               Next <ChevronRight className="h-4 w-4" />
             </button>
