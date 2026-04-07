@@ -72,6 +72,7 @@ export function WinesClient({
   const [flyToCoords, setFlyToCoords] = useState<[number, number] | null>(null);
   const [tourRegion, setTourRegion] = useState<string | null>(null);
   const [satellite, setSatellite] = useState(false);
+  const [activeCity, setActiveCity] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [, startTransition] = useTransition();
 
@@ -94,6 +95,8 @@ export function WinesClient({
     // Only fly to — don't navigate (that causes remount and kills the animation)
     setExploreRegion(region);
     setSearch(region);
+    setActiveCity(null);
+    setTourRegion(null);
   }
 
   // Navigate when user explicitly confirms explore (e.g. from sheet header)
@@ -255,7 +258,7 @@ export function WinesClient({
         {exploreRegion ? (
           <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
             <button
-              onClick={() => { setExploreRegion(null); setSearch(""); setTourRegion(null); }}
+              onClick={() => { setExploreRegion(null); setSearch(""); setTourRegion(null); setActiveCity(null); }}
               className="flex-shrink-0 h-[30px] px-3 rounded-[8px] bg-cherry text-white text-[11px] font-semibold flex items-center gap-1"
             >
               ← {exploreRegion}
@@ -276,8 +279,12 @@ export function WinesClient({
             {getRegionCities(exploreRegion).map((city) => (
               <button
                 key={city.name}
-                onClick={(e) => { e.stopPropagation(); setTourRegion(null); setFlyToCoords([...city.coords]); }}
-                className="flex-shrink-0 h-[30px] px-3 rounded-[8px] bg-[#1A1412]/60 backdrop-blur-xl text-white/70 border border-white/[0.06] text-[11px] font-semibold active:bg-cherry active:text-white transition-colors"
+                onClick={(e) => { e.stopPropagation(); setTourRegion(null); setActiveCity(city.name); setFlyToCoords([...city.coords]); }}
+                className={`flex-shrink-0 h-[30px] px-3 rounded-[8px] text-[11px] font-semibold transition-colors ${
+                  activeCity === city.name
+                    ? "bg-cherry border-cherry/60 text-white"
+                    : "bg-[#1A1412]/60 backdrop-blur-xl text-white/70 border border-white/[0.06] active:bg-cherry active:text-white"
+                }`}
               >
                 {city.name}
               </button>
@@ -345,7 +352,7 @@ export function WinesClient({
           {exploreRegion ? (
             <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
               <button
-                onClick={() => { setExploreRegion(null); setSearch(""); setSheet("peek"); setTourRegion(null); }}
+                onClick={() => { setExploreRegion(null); setSearch(""); setSheet("peek"); setTourRegion(null); setActiveCity(null); }}
                 className="flex-shrink-0 h-[30px] px-3 rounded-[8px] bg-cherry text-white text-[11px] font-semibold flex items-center gap-1"
               >
                 ← {exploreRegion}
@@ -366,8 +373,12 @@ export function WinesClient({
               {getRegionCities(exploreRegion).map((city) => (
                 <button
                   key={city.name}
-                  onClick={(e) => { e.stopPropagation(); setTourRegion(null); setFlyToCoords([...city.coords]); }}
-                  className="flex-shrink-0 h-[30px] px-3 rounded-[8px] bg-[#1A1412]/60 backdrop-blur-xl text-white/70 border border-white/[0.06] text-[11px] font-semibold active:bg-cherry active:text-white transition-colors"
+                  onClick={(e) => { e.stopPropagation(); setTourRegion(null); setActiveCity(city.name); setFlyToCoords([...city.coords]); }}
+                  className={`flex-shrink-0 h-[30px] px-3 rounded-[8px] text-[11px] font-semibold transition-colors ${
+                    activeCity === city.name
+                      ? "bg-cherry border-cherry/60 text-white"
+                      : "bg-[#1A1412]/60 backdrop-blur-xl text-white/70 border border-white/[0.06] active:bg-cherry active:text-white"
+                  }`}
                 >
                   {city.name}
                 </button>
