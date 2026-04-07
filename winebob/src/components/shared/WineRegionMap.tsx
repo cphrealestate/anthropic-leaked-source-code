@@ -186,22 +186,22 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
 
     if (!m.getLayer("wine-regions-fill")) {
       m.addLayer({
-        id: "wine-regions-fill", type: "fill", slot: "bottom", source: "wine-regions",
+        id: "wine-regions-fill", type: "fill", slot: "middle", source: "wine-regions",
         paint: {
           "fill-color": ["get", "color"],
-          "fill-opacity": ["case", ["boolean", ["feature-state", "hover"], false], 0.45, 0.25],
-          "fill-emissive-strength": 0.8,
+          "fill-opacity": ["case", ["boolean", ["feature-state", "hover"], false], 0.55, 0.35],
+          "fill-emissive-strength": 1.0,
         },
       } as mapboxgl.LayerSpecification);
     }
 
     if (!m.getLayer("wine-regions-border")) {
       m.addLayer({
-        id: "wine-regions-border", type: "line", slot: "bottom", source: "wine-regions",
+        id: "wine-regions-border", type: "line", slot: "middle", source: "wine-regions",
         paint: {
           "line-color": ["get", "color"],
-          "line-width": ["case", ["boolean", ["feature-state", "hover"], false], 2.5, 1.5],
-          "line-opacity": 0.7, "line-emissive-strength": 0.8,
+          "line-width": ["case", ["boolean", ["feature-state", "hover"], false], 3, 2],
+          "line-opacity": 0.85, "line-emissive-strength": 1.0,
         },
       } as mapboxgl.LayerSpecification);
     }
@@ -211,19 +211,28 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
         id: "wine-regions-label", type: "symbol", slot: "top", source: "wine-regions",
         layout: {
           "text-field": ["get", "name"],
-          "text-size": ["interpolate", ["linear"], ["zoom"], 3, 9, 6, 13, 8, 15],
+          "text-size": ["interpolate", ["linear"], ["zoom"], 3, 11, 5, 14, 8, 17],
           "text-font": ["DIN Pro Bold", "Arial Unicode MS Bold"],
           "text-allow-overlap": false,
         },
         paint: {
           "text-color": "#74070E",
-          "text-opacity": ["interpolate", ["linear"], ["zoom"], 3, 0.6, 5, 0.9],
-          "text-halo-color": "#FFFFFF", "text-halo-width": 2, "text-emissive-strength": 1.0,
+          "text-opacity": ["interpolate", ["linear"], ["zoom"], 3, 0.8, 5, 1.0],
+          "text-halo-color": "#FFFFFF", "text-halo-width": 2.5, "text-emissive-strength": 1.0,
         },
       } as mapboxgl.LayerSpecification);
     }
 
-    // POI layers (middle slot — above roads, below labels)
+    // Add our own streets vector source — Standard's "composite" doesn't reliably
+    // expose poi_label for custom layers. We add mapbox-streets-v8 explicitly.
+    if (!m.getSource("wb-streets")) {
+      m.addSource("wb-streets", {
+        type: "vector",
+        url: "mapbox://mapbox.mapbox-streets-v8",
+      });
+    }
+
+    // POI layers (top slot — must be above Standard's buildings/roads to be visible)
     const poiDefs: { id: string; cls: string; color: string; rank: number }[] = [
       { id: "poi-food", cls: "food_and_drink", color: "#74070E", rank: 3 },
       { id: "poi-hotel", cls: "lodging", color: "#8B6914", rank: 3 },
@@ -237,16 +246,16 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
     for (const d of poiDefs) {
       if (m.getLayer(d.id)) continue;
       m.addLayer({
-        id: d.id, type: "circle", slot: "middle", source: "composite", "source-layer": "poi_label",
+        id: d.id, type: "circle", slot: "top", source: "wb-streets", "source-layer": "poi_label",
         filter: ["all", ["==", ["get", "class"], d.cls], ["<=", ["get", "filterrank"], d.rank]],
         minzoom: 8,
         paint: {
           "circle-color": d.color,
-          "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 3, 10, 5, 12, 7, 14, 9],
-          "circle-opacity": ["interpolate", ["linear"], ["zoom"], 8, 0.6, 10, 0.85, 12, 1],
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 8, 4, 10, 7, 12, 9, 14, 12],
+          "circle-opacity": ["interpolate", ["linear"], ["zoom"], 8, 0.7, 10, 0.9, 12, 1],
           "circle-stroke-color": "#FFFFFF",
-          "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 8, 1, 10, 1.5, 12, 2],
-          "circle-stroke-opacity": ["interpolate", ["linear"], ["zoom"], 8, 0.6, 10, 0.8, 12, 1],
+          "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 8, 1.5, 10, 2, 12, 2.5],
+          "circle-stroke-opacity": 1,
           "circle-emissive-strength": 1.0,
         },
       } as mapboxgl.LayerSpecification);
@@ -255,19 +264,19 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
     for (const d of labelDefs) {
       if (m.getLayer(d.id)) continue;
       m.addLayer({
-        id: d.id, type: "symbol", slot: "top", source: "composite", "source-layer": "poi_label",
+        id: d.id, type: "symbol", slot: "top", source: "wb-streets", "source-layer": "poi_label",
         filter: ["all", ["==", ["get", "class"], d.cls], ["<=", ["get", "filterrank"], d.rank]],
         minzoom: 10,
         layout: {
           "text-field": ["get", "name"],
-          "text-size": ["interpolate", ["linear"], ["zoom"], 10, 10, 14, 13],
-          "text-font": ["DIN Pro Medium", "Arial Unicode MS Regular"],
-          "text-offset": [0, 1.2], "text-anchor": "top", "text-allow-overlap": false,
+          "text-size": ["interpolate", ["linear"], ["zoom"], 10, 11, 14, 14],
+          "text-font": ["DIN Pro Bold", "Arial Unicode MS Bold"],
+          "text-offset": [0, 1.4], "text-anchor": "top", "text-allow-overlap": false,
         },
         paint: {
           "text-color": d.color,
-          "text-opacity": ["interpolate", ["linear"], ["zoom"], 10, 0.7, 12, 1],
-          "text-halo-color": "#FFFFFF", "text-halo-width": 1.5, "text-emissive-strength": 1.0,
+          "text-opacity": ["interpolate", ["linear"], ["zoom"], 10, 0.8, 12, 1],
+          "text-halo-color": "#FFFFFF", "text-halo-width": 2, "text-emissive-strength": 1.0,
         },
       } as mapboxgl.LayerSpecification);
     }
@@ -291,9 +300,9 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
       config: {
         basemap: {
           lightPreset: "dawn",
-          showPointOfInterestLabels: true,
-          showRoadLabels: true,
-          showPlaceLabels: true,
+          showPointOfInterestLabels: false,  // We render our own wine-relevant POIs
+          showRoadLabels: false,             // Remove road number clutter
+          showPlaceLabels: true,             // Keep country/city names for orientation
           showTransitLabels: false,
         },
       } as Record<string, Record<string, unknown>>,
@@ -449,9 +458,9 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
   function setRegionVisibility(visible: boolean) {
     if (!map.current || !mapLoaded.current) return;
     try {
-      map.current.setPaintProperty("wine-regions-fill", "fill-opacity", visible ? ["case", ["boolean", ["feature-state", "hover"], false], 0.45, 0.25] : 0);
+      map.current.setPaintProperty("wine-regions-fill", "fill-opacity", visible ? ["case", ["boolean", ["feature-state", "hover"], false], 0.55, 0.35] : 0);
       map.current.setLayoutProperty("wine-regions-fill", "visibility", visible ? "visible" : "none");
-      map.current.setPaintProperty("wine-regions-border", "line-opacity", visible ? 0.7 : 0);
+      map.current.setPaintProperty("wine-regions-border", "line-opacity", visible ? 0.85 : 0);
       map.current.setLayoutProperty("wine-regions-border", "visibility", visible ? "visible" : "none");
       map.current.setLayoutProperty("wine-regions-label", "visibility", visible ? "visible" : "none");
     } catch {}
