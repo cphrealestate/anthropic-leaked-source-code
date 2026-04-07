@@ -15,6 +15,10 @@ import {
   Loader2,
   ChevronRight,
   Sparkles,
+  Grape,
+  MapPin,
+  Globe,
+  Tag,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -45,25 +49,19 @@ const GRAPE_SUGGESTIONS = [
   "Gamay",
 ];
 
-const WINE_TYPES = ["Red", "White", "Rosé", "Sparkling", "Orange", "Dessert"];
+const WINE_TYPES = [
+  { value: "Red", emoji: "🔴" },
+  { value: "White", emoji: "⚪" },
+  { value: "Rosé", emoji: "🩷" },
+  { value: "Sparkling", emoji: "✨" },
+  { value: "Orange", emoji: "🟠" },
+  { value: "Dessert", emoji: "🍯" },
+];
 
 const WINE_COUNTRIES = [
-  "Argentina",
-  "Australia",
-  "Austria",
-  "Chile",
-  "France",
-  "Germany",
-  "Greece",
-  "Hungary",
-  "Italy",
-  "Lebanon",
-  "New Zealand",
-  "Portugal",
-  "South Africa",
-  "Spain",
-  "United States",
-  "Uruguay",
+  "Argentina", "Australia", "Austria", "Chile", "France", "Germany",
+  "Greece", "Hungary", "Italy", "Lebanon", "New Zealand", "Portugal",
+  "South Africa", "Spain", "United States", "Uruguay",
 ];
 
 const POLL_INTERVAL = 3000;
@@ -84,14 +82,8 @@ interface GuessForm {
 }
 
 const emptyForm: GuessForm = {
-  grape: "",
-  region: "",
-  country: "",
-  vintage: "",
-  producer: "",
-  type: "",
-  price: "",
-  notes: "",
+  grape: "", region: "", country: "", vintage: "",
+  producer: "", type: "", price: "", notes: "",
 };
 
 // ---------------------------------------------------------------------------
@@ -145,25 +137,40 @@ export default function PlayPage({
     (w) => w.position === event.currentWine
   );
 
+  // Wine is locked once revealed — no more edits allowed
+  const isWineLocked = currentBlindWine?.revealed ?? false;
+
+  // Track which wine the form is currently for (prevents clearing on poll updates)
+  const formWineRef = useRef<number>(0);
+
   // Pre-fill form when wine changes or existing guess is found
   useEffect(() => {
-    if (currentGuess && !editing) {
-      setForm({
-        grape: currentGuess.guessedGrape ?? "",
-        region: currentGuess.guessedRegion ?? "",
-        country: currentGuess.guessedCountry ?? "",
-        vintage: currentGuess.guessedVintage?.toString() ?? "",
-        producer: currentGuess.guessedProducer ?? "",
-        type: currentGuess.guessedType ?? "",
-        price: currentGuess.guessedPrice?.toString() ?? "",
-        notes: currentGuess.notes ?? "",
-      });
-      setSubmitted(true);
-    } else if (!currentGuess) {
-      setForm(emptyForm);
-      setSubmitted(false);
+    const winePos = event?.currentWine ?? 0;
+
+    // Only reset form when the wine position actually changes
+    if (winePos !== formWineRef.current) {
+      formWineRef.current = winePos;
+      if (currentGuess) {
+        setForm({
+          grape: currentGuess.guessedGrape ?? "",
+          region: currentGuess.guessedRegion ?? "",
+          country: currentGuess.guessedCountry ?? "",
+          vintage: currentGuess.guessedVintage?.toString() ?? "",
+          producer: currentGuess.guessedProducer ?? "",
+          type: currentGuess.guessedType ?? "",
+          price: currentGuess.guessedPrice?.toString() ?? "",
+          notes: currentGuess.notes ?? "",
+        });
+        setSubmitted(true);
+      } else {
+        setForm(emptyForm);
+        setSubmitted(false);
+        startTimeRef.current = Date.now();
+      }
       setEditing(false);
-      startTimeRef.current = Date.now();
+    } else if (currentGuess && !editing && !submitted) {
+      // Existing guess found on same wine (e.g., after submit + poll)
+      setSubmitted(true);
     }
   }, [event?.currentWine, currentGuess?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -190,7 +197,6 @@ export default function PlayPage({
       });
       setSubmitted(true);
       setEditing(false);
-      // Re-fetch immediately so the guess is reflected
       await fetchEvent();
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to submit guess");
@@ -206,9 +212,7 @@ export default function PlayPage({
     if (navigator.share) {
       try {
         await navigator.share({ title: "WineBob Tasting", text });
-      } catch {
-        // user cancelled
-      }
+      } catch { /* user cancelled */ }
     } else {
       await navigator.clipboard.writeText(text);
     }
@@ -218,8 +222,10 @@ export default function PlayPage({
   if (loading) {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center bg-background">
-        <Wine className="h-12 w-12 text-wine-burgundy animate-pulse" />
-        <p className="mt-4 text-muted text-lg">Loading tasting...</p>
+        <div className="h-16 w-16 rounded-[16px] bg-card-bg border border-card-border shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] flex items-center justify-center mb-5">
+          <Wine className="h-8 w-8 text-cherry animate-pulse" />
+        </div>
+        <p className="text-muted text-[15px] font-medium">Loading tasting...</p>
       </div>
     );
   }
@@ -227,11 +233,14 @@ export default function PlayPage({
   if (!event) {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center bg-background px-6">
-        <X className="h-12 w-12 text-red-500" />
-        <p className="mt-4 text-xl font-semibold">Event not found</p>
-        <p className="mt-2 text-muted text-center">
+        <div className="h-16 w-16 rounded-[16px] bg-red-50 border border-red-200 flex items-center justify-center mb-5">
+          <X className="h-8 w-8 text-red-500" />
+        </div>
+        <p className="text-xl font-bold">Event not found</p>
+        <p className="mt-2 text-muted text-center text-[15px] mb-6">
           This tasting may have been deleted or the link is incorrect.
         </p>
+        <a href="/" className="btn-primary px-8 touch-target">Back to Home</a>
       </div>
     );
   }
@@ -240,49 +249,61 @@ export default function PlayPage({
   if (event.status === "draft" || event.status === "lobby") {
     return (
       <div className="fixed inset-0 flex flex-col bg-background safe-top safe-bottom">
+        {/* Top bar with leave option */}
+        <div className="px-4 md:px-8 lg:px-10 pt-5">
+          <a
+            href="/"
+            className="inline-flex items-center gap-1 text-[13px] font-semibold text-muted active:text-foreground transition-colors touch-target"
+          >
+            <ChevronRight className="h-4 w-4 rotate-180" />
+            Leave
+          </a>
+        </div>
+
         <div className="flex-1 flex flex-col items-center justify-center px-6">
           <div className="animate-fade-in-up text-center">
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-wine-burgundy/10 mb-6">
-              <Wine className="h-10 w-10 text-wine-burgundy animate-pulse" />
+            <div className="h-20 w-20 rounded-[16px] bg-card-bg border border-card-border shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] flex items-center justify-center mx-auto mb-6">
+              <Wine className="h-10 w-10 text-cherry animate-pulse" />
             </div>
-            <h1 className="font-serif text-3xl font-bold text-foreground">
+            <h1 className="text-3xl font-bold text-foreground tracking-tight">
               {event.title}
             </h1>
             {event.description && (
-              <p className="mt-2 text-muted text-lg max-w-md">
+              <p className="mt-2 text-muted text-[16px] max-w-md mx-auto">
                 {event.description}
               </p>
             )}
-            <div className="mt-8 flex items-center gap-2 justify-center text-wine-burgundy">
+            <div className="mt-8 flex items-center gap-2 justify-center text-cherry">
               <Loader2 className="h-5 w-5 animate-spin" />
-              <span className="text-lg font-medium">
+              <span className="text-[16px] font-medium">
                 Waiting for host to start...
               </span>
             </div>
           </div>
 
           <div className="mt-10 w-full max-w-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <Users className="h-5 w-5 text-muted" />
-              <span className="text-muted font-medium">
-                {event.guests.length} guest{event.guests.length !== 1 && "s"}{" "}
-                joined
+            <div className="flex items-center gap-2 mb-3">
+              <Users className="h-4 w-4 text-muted" />
+              <span className="text-[13px] font-semibold text-muted">
+                {event.guests.length} guest{event.guests.length !== 1 && "s"} joined
               </span>
             </div>
-            <div className="wine-card p-4 space-y-3">
+            <div className="rounded-[16px] bg-card-bg border border-card-border shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] divide-y divide-card-border/40">
               {event.guests.map((g: GuestParticipant) => (
                 <div
                   key={g.id}
-                  className={`flex items-center gap-3 ${
-                    g.id === guestId ? "font-semibold text-wine-burgundy" : ""
+                  className={`flex items-center gap-3 px-4 py-3 ${
+                    g.id === guestId ? "bg-cherry/5" : ""
                   }`}
                 >
-                  <div className="w-8 h-8 rounded-full bg-wine-burgundy/10 flex items-center justify-center text-sm font-bold text-wine-burgundy">
+                  <div className="h-9 w-9 rounded-[12px] bg-cherry/10 flex items-center justify-center text-[13px] font-bold text-cherry">
                     {g.displayName.charAt(0).toUpperCase()}
                   </div>
-                  <span>{g.displayName}</span>
+                  <span className={`text-[14px] font-medium ${g.id === guestId ? "text-cherry font-semibold" : "text-foreground"}`}>
+                    {g.displayName}
+                  </span>
                   {g.id === guestId && (
-                    <span className="text-xs text-muted">(you)</span>
+                    <span className="text-[11px] text-muted ml-auto">(you)</span>
                   )}
                 </div>
               ))}
@@ -303,66 +324,63 @@ export default function PlayPage({
     const actual = currentBlindWine.wine;
     return (
       <div className="fixed inset-0 flex flex-col bg-background safe-top safe-bottom overflow-y-auto">
-        <div className="px-6 pt-6 pb-4">
-          <p className="text-sm font-medium text-wine-burgundy uppercase tracking-wide">
-            Wine #{event.currentWine} — Revealed
-          </p>
-        </div>
-
-        <div className="flex-1 px-6 pb-8">
-          <div className="wine-card p-6 animate-fade-in-up">
-            <div className="flex items-center gap-3 mb-6">
-              <Sparkles className="h-6 w-6 text-wine-gold" />
-              <h2 className="font-serif text-2xl font-bold">{actual.name}</h2>
+        <div className="px-4 md:px-8 lg:px-10 pt-6 pb-8">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <p className="text-[12px] font-bold text-cherry uppercase tracking-widest">
+                Wine #{event.currentWine} — Revealed
+              </p>
             </div>
-
-            <div className="space-y-4">
-              <RevealRow
-                label="Producer"
-                actual={actual.producer}
-                guessed={currentGuess?.guessedProducer}
-              />
-              <RevealRow
-                label="Grape"
-                actual={actual.grapes.join(", ")}
-                guessed={currentGuess?.guessedGrape}
-              />
-              <RevealRow
-                label="Region"
-                actual={actual.region}
-                guessed={currentGuess?.guessedRegion}
-              />
-              <RevealRow
-                label="Country"
-                actual={actual.country}
-                guessed={currentGuess?.guessedCountry}
-              />
-              <RevealRow
-                label="Vintage"
-                actual={actual.vintage?.toString() ?? "NV"}
-                guessed={currentGuess?.guessedVintage?.toString()}
-              />
-              <RevealRow
-                label="Type"
-                actual={actual.type}
-                guessed={currentGuess?.guessedType}
-              />
+            <div className="h-10 w-10 rounded-[16px] bg-amber-50 border border-amber-200 flex items-center justify-center">
+              <Sparkles className="h-5 w-5 text-amber-600" />
             </div>
-
-            {currentGuess?.score != null && (
-              <div className="mt-6 pt-4 border-t border-card-border flex items-center justify-between">
-                <span className="text-muted font-medium">Score</span>
-                <span className="text-2xl font-bold text-wine-burgundy">
-                  {currentGuess.score} pts
-                </span>
-              </div>
-            )}
           </div>
 
-          <p className="text-center text-muted mt-6 flex items-center justify-center gap-2">
-            <Clock className="h-4 w-4" />
-            Waiting for next wine...
-          </p>
+          {/* Wine name card */}
+          <div className="rounded-[16px] bg-card-bg border border-card-border shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] p-6 mb-4 animate-scale-in">
+            <h2 className="text-2xl font-bold text-foreground tracking-tight mb-1">
+              {actual.name}
+            </h2>
+            <p className="text-[14px] text-muted">
+              {actual.producer}{actual.vintage ? ` · ${actual.vintage}` : " · NV"}
+            </p>
+          </div>
+
+          {/* Comparison cards */}
+          <div className="space-y-2.5 stagger-children">
+            <RevealCard label="Grape" icon={<Grape className="h-4 w-4" />} actual={actual.grapes.join(", ")} guessed={currentGuess?.guessedGrape} />
+            <RevealCard label="Region" icon={<MapPin className="h-4 w-4" />} actual={actual.region} guessed={currentGuess?.guessedRegion} />
+            <RevealCard label="Country" icon={<Globe className="h-4 w-4" />} actual={actual.country} guessed={currentGuess?.guessedCountry} />
+            <RevealCard label="Vintage" icon={<Clock className="h-4 w-4" />} actual={actual.vintage?.toString() ?? "NV"} guessed={currentGuess?.guessedVintage?.toString()} />
+            <RevealCard label="Type" icon={<Wine className="h-4 w-4" />} actual={actual.type} guessed={currentGuess?.guessedType} />
+            <RevealCard label="Producer" icon={<Tag className="h-4 w-4" />} actual={actual.producer} guessed={currentGuess?.guessedProducer} />
+          </div>
+
+          {/* Score */}
+          {currentGuess?.score != null && (
+            <div className="rounded-[16px] bg-card-bg border border-card-border shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] p-5 mt-4 flex items-center justify-between animate-scale-in">
+              <span className="text-[14px] font-medium text-muted">Your score</span>
+              <span className="text-3xl font-bold text-cherry tracking-tight">
+                {currentGuess.score} <span className="text-[14px] font-semibold text-muted">pts</span>
+              </span>
+            </div>
+          )}
+
+          {/* Progress indicator */}
+          <div className="rounded-[16px] bg-card-bg border border-card-border shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] p-4 mt-6 flex items-center gap-3">
+            <Loader2 className="h-4 w-4 animate-spin text-cherry flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-[14px] font-medium text-foreground">
+                {event.currentWine < event.wines.length
+                  ? "Waiting for next wine..."
+                  : "Last wine — waiting for results..."}
+              </p>
+              <p className="text-[12px] text-muted mt-0.5">
+                Wine {event.currentWine} of {event.wines.length}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -374,255 +392,262 @@ export default function PlayPage({
   return (
     <div className="fixed inset-0 flex flex-col bg-background safe-top safe-bottom">
       {/* Header */}
-      <div className="px-6 pt-6 pb-3 flex items-center justify-between">
+      <div className="px-4 md:px-8 lg:px-10 pt-5 pb-3 flex items-center justify-between">
         <div>
-          <p className="text-sm text-muted uppercase tracking-wide font-medium">
+          <p className="text-[11px] font-bold text-muted uppercase tracking-widest">
             {event.title}
           </p>
-          <h1 className="font-serif text-2xl font-bold mt-1">
+          <h1 className="text-[26px] font-bold text-foreground tracking-tight mt-0.5">
             Wine #{event.currentWine}
           </h1>
         </div>
-        <div className="w-12 h-12 rounded-full bg-wine-burgundy/10 flex items-center justify-center">
-          <Wine className="h-6 w-6 text-wine-burgundy" />
+        <div className="h-12 w-12 rounded-[16px] bg-cherry/10 flex items-center justify-center">
+          <Wine className="h-6 w-6 text-cherry" />
         </div>
       </div>
 
       {/* Form */}
-      <div className="flex-1 overflow-y-auto px-6 pb-32 scroll-smooth">
-        {submitted && !editing ? (
-          <div className="wine-card p-6 animate-fade-in-up">
-            <div className="flex items-center gap-3 text-green-600 mb-4">
-              <Check className="h-6 w-6" />
-              <span className="text-lg font-semibold">Guess submitted</span>
-            </div>
-            <div className="space-y-2 text-sm text-muted">
-              {form.grape && <p>Grape: {form.grape}</p>}
-              {form.region && <p>Region: {form.region}</p>}
-              {form.country && <p>Country: {form.country}</p>}
-              {form.vintage && <p>Vintage: {form.vintage}</p>}
-              {form.producer && <p>Producer: {form.producer}</p>}
-              {form.type && <p>Type: {form.type}</p>}
-              {form.price && <p>Price: ${form.price}</p>}
-              {form.notes && <p>Notes: {form.notes}</p>}
-            </div>
-            <button
-              onClick={() => setEditing(true)}
-              className="mt-4 flex items-center gap-2 text-wine-burgundy font-medium touch-target"
-            >
-              <Pencil className="h-4 w-4" />
-              Edit guess
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-5">
-            {/* Type pills */}
-            {guessFields.includes("type") && (
-              <fieldset>
-                <legend className="text-sm font-medium text-muted mb-2">
-                  Type
-                </legend>
-                <div className="flex flex-wrap gap-2">
-                  {WINE_TYPES.map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() =>
-                        setForm((f) => ({
-                          ...f,
-                          type: f.type === t ? "" : t,
-                        }))
-                      }
-                      className={`px-4 py-2.5 rounded-full text-sm font-medium transition-colors touch-target ${
-                        form.type === t
-                          ? "bg-wine-burgundy text-white"
-                          : "bg-card-bg border border-card-border text-foreground"
-                      }`}
-                    >
-                      {t}
-                    </button>
-                  ))}
+      <div className="flex-1 overflow-y-auto scroll-smooth">
+        <div className="px-4 md:px-8 lg:px-10 pb-32">
+          {submitted && !editing ? (
+            /* ---- Submitted confirmation ---- */
+            <div className="rounded-[16px] bg-card-bg border border-card-border shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] p-6 animate-scale-in">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="h-10 w-10 rounded-[16px] bg-green-50 border border-green-200 flex items-center justify-center">
+                  <Check className="h-5 w-5 text-green-600" />
                 </div>
-              </fieldset>
-            )}
-
-            {/* Grape */}
-            {guessFields.includes("grape") && (
-              <fieldset>
-                <legend className="text-sm font-medium text-muted mb-2">
-                  Grape
-                </legend>
-                <input
-                  type="text"
-                  value={form.grape}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, grape: e.target.value }))
-                  }
-                  placeholder="e.g. Pinot Noir"
-                  className="w-full px-4 py-3 rounded-xl border border-card-border bg-card-bg text-foreground text-base touch-target"
-                />
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {GRAPE_SUGGESTIONS.map((g) => (
-                    <button
-                      key={g}
-                      type="button"
-                      onClick={() => setForm((f) => ({ ...f, grape: g }))}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                        form.grape === g
-                          ? "bg-wine-burgundy text-white"
-                          : "bg-wine-cream-dark text-foreground"
-                      }`}
-                    >
-                      {g}
-                    </button>
-                  ))}
+                <div>
+                  <span className="text-[16px] font-bold text-foreground">Guess submitted</span>
+                  <p className="text-[12px] text-muted">Waiting for the reveal...</p>
                 </div>
-              </fieldset>
-            )}
+              </div>
 
-            {/* Region */}
-            {guessFields.includes("region") && (
-              <fieldset>
-                <legend className="text-sm font-medium text-muted mb-2">
-                  Region
-                </legend>
-                <input
-                  type="text"
-                  value={form.region}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, region: e.target.value }))
-                  }
-                  placeholder="e.g. Burgundy, Napa Valley"
-                  className="w-full px-4 py-3 rounded-xl border border-card-border bg-card-bg text-foreground text-base touch-target"
-                />
-              </fieldset>
-            )}
+              <div className="space-y-2">
+                {form.type && <SummaryPill label="Type" value={form.type} />}
+                {form.grape && <SummaryPill label="Grape" value={form.grape} />}
+                {form.region && <SummaryPill label="Region" value={form.region} />}
+                {form.country && <SummaryPill label="Country" value={form.country} />}
+                {form.vintage && <SummaryPill label="Vintage" value={form.vintage} />}
+                {form.producer && <SummaryPill label="Producer" value={form.producer} />}
+                {form.price && <SummaryPill label="Price" value={`$${form.price}`} />}
+                {form.notes && <SummaryPill label="Notes" value={form.notes} />}
+              </div>
 
-            {/* Country */}
-            {guessFields.includes("country") && (
-              <fieldset>
-                <legend className="text-sm font-medium text-muted mb-2">
-                  Country
-                </legend>
-                <select
-                  value={form.country}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, country: e.target.value }))
-                  }
-                  className="w-full px-4 py-3 rounded-xl border border-card-border bg-card-bg text-foreground text-base touch-target appearance-none"
+              {!isWineLocked && (
+                <button
+                  onClick={() => setEditing(true)}
+                  className="mt-5 flex items-center gap-2 text-cherry font-semibold text-[14px] touch-target"
                 >
-                  <option value="">Select a country</option>
-                  {WINE_COUNTRIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </fieldset>
-            )}
+                  <Pencil className="h-4 w-4" />
+                  Edit guess
+                </button>
+              )}
+              {isWineLocked && (
+                <p className="mt-4 text-[12px] text-muted flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5" />
+                  Guesses locked — wine has been revealed
+                </p>
+              )}
+            </div>
+          ) : (
+            /* ---- Guess form ---- */
+            <div className="space-y-5">
+              {/* Type — visual pill cards */}
+              {guessFields.includes("type") && (
+                <fieldset>
+                  <legend className="text-[13px] font-bold text-foreground uppercase tracking-wide mb-3">
+                    Type
+                  </legend>
+                  <div className="grid grid-cols-3 gap-2">
+                    {WINE_TYPES.map((t) => (
+                      <button
+                        key={t.value}
+                        type="button"
+                        onClick={() =>
+                          setForm((f) => ({ ...f, type: f.type === t.value ? "" : t.value }))
+                        }
+                        className={`touch-target rounded-[16px] p-3 text-center transition-all ${
+                          form.type === t.value
+                            ? "bg-cherry text-white shadow-sm ring-2 ring-cherry/30"
+                            : "bg-card-bg border border-card-border text-foreground"
+                        }`}
+                      >
+                        <span className="text-lg block">{t.emoji}</span>
+                        <span className="text-[12px] font-semibold mt-1 block">{t.value}</span>
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
 
-            {/* Vintage */}
-            {guessFields.includes("vintage") && (
+              {/* Grape — input + suggestion chips */}
+              {guessFields.includes("grape") && (
+                <fieldset>
+                  <legend className="text-[13px] font-bold text-foreground uppercase tracking-wide mb-2">
+                    Grape
+                  </legend>
+                  <input
+                    type="text"
+                    value={form.grape}
+                    onChange={(e) => setForm((f) => ({ ...f, grape: e.target.value }))}
+                    placeholder="e.g. Pinot Noir"
+                    className="input-field w-full touch-target"
+                  />
+                  <div className="flex flex-wrap gap-1.5 mt-2.5">
+                    {GRAPE_SUGGESTIONS.map((g) => (
+                      <button
+                        key={g}
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, grape: g }))}
+                        className={`px-3 py-1.5 rounded-[8px] text-[12px] font-medium transition-all ${
+                          form.grape === g
+                            ? "bg-cherry text-white shadow-sm"
+                            : "bg-card-bg border border-card-border text-foreground"
+                        }`}
+                      >
+                        {g}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
+
+              {/* Region */}
+              {guessFields.includes("region") && (
+                <fieldset>
+                  <legend className="text-[13px] font-bold text-foreground uppercase tracking-wide mb-2">
+                    Region
+                  </legend>
+                  <input
+                    type="text"
+                    value={form.region}
+                    onChange={(e) => setForm((f) => ({ ...f, region: e.target.value }))}
+                    placeholder="e.g. Burgundy, Napa Valley"
+                    className="input-field w-full touch-target"
+                  />
+                </fieldset>
+              )}
+
+              {/* Country — visual selector */}
+              {guessFields.includes("country") && (
+                <fieldset>
+                  <legend className="text-[13px] font-bold text-foreground uppercase tracking-wide mb-2">
+                    Country
+                  </legend>
+                  <div className="rounded-[16px] bg-card-bg border border-card-border shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] overflow-hidden">
+                    <select
+                      value={form.country}
+                      onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))}
+                      className="w-full px-4 py-3.5 bg-transparent text-foreground text-[15px] touch-target appearance-none"
+                    >
+                      <option value="">Select a country</option>
+                      {WINE_COUNTRIES.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+                </fieldset>
+              )}
+
+              {/* Vintage */}
+              {guessFields.includes("vintage") && (
+                <fieldset>
+                  <legend className="text-[13px] font-bold text-foreground uppercase tracking-wide mb-2">
+                    Vintage
+                  </legend>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={form.vintage}
+                    onChange={(e) => setForm((f) => ({ ...f, vintage: e.target.value }))}
+                    placeholder="e.g. 2019"
+                    min={1900}
+                    max={2099}
+                    className="input-field w-full touch-target"
+                  />
+                </fieldset>
+              )}
+
+              {/* Producer */}
+              {guessFields.includes("producer") && (
+                <fieldset>
+                  <legend className="text-[13px] font-bold text-foreground uppercase tracking-wide mb-2">
+                    Producer
+                  </legend>
+                  <input
+                    type="text"
+                    value={form.producer}
+                    onChange={(e) => setForm((f) => ({ ...f, producer: e.target.value }))}
+                    placeholder="e.g. Domaine de la Romanée-Conti"
+                    className="input-field w-full touch-target"
+                  />
+                </fieldset>
+              )}
+
+              {/* Price */}
+              {guessFields.includes("price") && (
+                <fieldset>
+                  <legend className="text-[13px] font-bold text-foreground uppercase tracking-wide mb-2">
+                    Price ($)
+                  </legend>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    value={form.price}
+                    onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
+                    placeholder="e.g. 45"
+                    min={0}
+                    className="input-field w-full touch-target"
+                  />
+                </fieldset>
+              )}
+
+              {/* Notes — always shown */}
               <fieldset>
-                <legend className="text-sm font-medium text-muted mb-2">
-                  Vintage
+                <legend className="text-[13px] font-bold text-foreground uppercase tracking-wide mb-2">
+                  Tasting Notes
                 </legend>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={form.vintage}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, vintage: e.target.value }))
-                  }
-                  placeholder="e.g. 2019"
-                  min={1900}
-                  max={2099}
-                  className="w-full px-4 py-3 rounded-xl border border-card-border bg-card-bg text-foreground text-base touch-target"
+                <textarea
+                  value={form.notes}
+                  onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                  placeholder="What do you taste? Aromas, flavors, texture..."
+                  rows={3}
+                  className="input-field w-full resize-none"
                 />
               </fieldset>
-            )}
 
-            {/* Producer */}
-            {guessFields.includes("producer") && (
-              <fieldset>
-                <legend className="text-sm font-medium text-muted mb-2">
-                  Producer
-                </legend>
-                <input
-                  type="text"
-                  value={form.producer}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, producer: e.target.value }))
-                  }
-                  placeholder="e.g. Domaine de la Romanée-Conti"
-                  className="w-full px-4 py-3 rounded-xl border border-card-border bg-card-bg text-foreground text-base touch-target"
-                />
-              </fieldset>
-            )}
-
-            {/* Price */}
-            {guessFields.includes("price") && (
-              <fieldset>
-                <legend className="text-sm font-medium text-muted mb-2">
-                  Price ($)
-                </legend>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  value={form.price}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, price: e.target.value }))
-                  }
-                  placeholder="e.g. 45"
-                  min={0}
-                  className="w-full px-4 py-3 rounded-xl border border-card-border bg-card-bg text-foreground text-base touch-target"
-                />
-              </fieldset>
-            )}
-
-            {/* Notes — always shown */}
-            <fieldset>
-              <legend className="text-sm font-medium text-muted mb-2">
-                Tasting Notes
-              </legend>
-              <textarea
-                value={form.notes}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, notes: e.target.value }))
-                }
-                placeholder="What do you taste? Aromas, flavors, texture..."
-                rows={3}
-                className="w-full px-4 py-3 rounded-xl border border-card-border bg-card-bg text-foreground text-base resize-none"
-              />
-            </fieldset>
-
-            {error && (
-              <p className="text-red-500 text-sm font-medium">{error}</p>
-            )}
-          </div>
-        )}
+              {error && (
+                <div className="rounded-[16px] bg-red-50 border border-red-200 p-3">
+                  <p className="text-red-600 text-[13px] font-medium">{error}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Sticky submit button */}
-      {(!submitted || editing) && (
-        <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background via-background to-transparent safe-bottom">
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="w-full py-4 rounded-2xl bg-wine-burgundy text-white text-lg font-semibold flex items-center justify-center gap-2 touch-target disabled:opacity-60 transition-opacity active:scale-[0.98]"
-          >
-            {submitting ? (
-              <>
-                <Loader2 className="h-5 w-5 animate-spin" />
-                Submitting...
-              </>
-            ) : (
-              <>
-                Submit Guess
-                <ChevronRight className="h-5 w-5" />
-              </>
-            )}
-          </button>
+      {/* Sticky submit button — hidden when wine is locked (revealed) */}
+      {(!submitted || editing) && !isWineLocked && (
+        <div className="fixed bottom-0 left-0 right-0 safe-bottom z-50">
+          <div className="px-4 md:px-8 lg:px-10 pb-5 pt-3 bg-gradient-to-t from-background via-background to-transparent">
+            <button
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="btn-primary touch-target w-full"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  Submit Guess
+                  <ChevronRight className="h-5 w-5" />
+                </>
+              )}
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -630,15 +655,30 @@ export default function PlayPage({
 }
 
 // ---------------------------------------------------------------------------
-// Reveal comparison row
+// Summary pill (submitted guess recap)
 // ---------------------------------------------------------------------------
 
-function RevealRow({
+function SummaryPill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between py-2 px-1">
+      <span className="text-[12px] font-semibold text-muted uppercase tracking-wide">{label}</span>
+      <span className="text-[14px] font-medium text-foreground">{value}</span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Reveal comparison card
+// ---------------------------------------------------------------------------
+
+function RevealCard({
   label,
+  icon,
   actual,
   guessed,
 }: {
   label: string;
+  icon: React.ReactNode;
   actual: string;
   guessed?: string | null;
 }) {
@@ -648,23 +688,32 @@ function RevealRow({
     actual.toLowerCase().includes(guessed.toLowerCase());
 
   return (
-    <div className="flex items-start gap-3">
-      <div className="mt-0.5">
-        {guessed ? (
-          isMatch ? (
-            <Check className="h-5 w-5 text-green-600" />
-          ) : (
-            <X className="h-5 w-5 text-red-500" />
-          )
-        ) : (
-          <div className="h-5 w-5 rounded-full border-2 border-muted/30" />
-        )}
+    <div className="rounded-[16px] bg-card-bg border border-card-border shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] p-4 flex items-center gap-3.5">
+      <div className={`h-10 w-10 rounded-[12px] bg-card-bg border border-card-border flex items-center justify-center flex-shrink-0 ${
+        !guessed ? "text-muted/40" : isMatch ? "text-green-600" : "text-red-500"
+      }`}>
+        {icon}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-xs text-muted uppercase tracking-wide">{label}</p>
-        <p className="font-semibold text-foreground">{actual}</p>
+        <p className="text-[11px] font-semibold text-muted uppercase tracking-wide">{label}</p>
+        <p className="text-[15px] font-bold text-foreground mt-0.5">{actual}</p>
         {guessed && !isMatch && (
-          <p className="text-sm text-red-400 line-through">{guessed}</p>
+          <p className="text-[12px] text-red-400 line-through mt-0.5">{guessed}</p>
+        )}
+      </div>
+      <div className="flex-shrink-0">
+        {guessed ? (
+          isMatch ? (
+            <div className="h-7 w-7 rounded-full bg-green-100 flex items-center justify-center">
+              <Check className="h-4 w-4 text-green-600" strokeWidth={3} />
+            </div>
+          ) : (
+            <div className="h-7 w-7 rounded-full bg-red-50 flex items-center justify-center">
+              <X className="h-4 w-4 text-red-500" strokeWidth={3} />
+            </div>
+          )
+        ) : (
+          <div className="h-7 w-7 rounded-full border-2 border-card-border" />
         )}
       </div>
     </div>
@@ -684,7 +733,6 @@ function CompletedView({
   guestId: string;
   onShare: () => void;
 }) {
-  // Compute total scores per guest
   const scoresByGuest = new Map<string, number>();
   for (const guess of event.guesses) {
     scoresByGuest.set(
@@ -702,53 +750,57 @@ function CompletedView({
 
   const myRank = ranked.findIndex((g) => g.id === guestId) + 1;
 
+  const MEDAL_COLORS = [
+    "bg-amber-400 text-white",     // gold
+    "bg-gray-300 text-gray-700",   // silver
+    "bg-orange-300 text-orange-800", // bronze
+  ];
+
   return (
     <div className="fixed inset-0 flex flex-col bg-background safe-top safe-bottom overflow-y-auto">
-      <div className="px-6 pt-8 pb-4 text-center animate-fade-in-up">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-wine-gold/20 mb-4 animate-cheers">
-          <Trophy className="h-8 w-8 text-wine-gold" />
+      <div className="px-4 md:px-8 lg:px-10 pt-8 pb-8">
+        {/* Trophy header */}
+        <div className="text-center mb-8 animate-fade-in-up">
+          <div className="h-20 w-20 rounded-[16px] bg-amber-50 border border-amber-200 flex items-center justify-center mx-auto mb-5 animate-cheers">
+            <Trophy className="h-10 w-10 text-amber-600" />
+          </div>
+          <h1 className="text-3xl font-bold text-foreground tracking-tight">Tasting Complete!</h1>
+          <p className="text-muted mt-2 text-[16px]">{event.title}</p>
+          {myRank > 0 && (
+            <p className="mt-3 text-cherry font-bold text-[18px]">
+              You placed #{myRank} of {ranked.length}
+            </p>
+          )}
         </div>
-        <h1 className="font-serif text-3xl font-bold">Tasting Complete!</h1>
-        <p className="text-muted mt-2 text-lg">{event.title}</p>
-        {myRank > 0 && (
-          <p className="mt-3 text-wine-burgundy font-semibold text-lg">
-            You placed #{myRank} of {ranked.length}
-          </p>
-        )}
-      </div>
 
-      <div className="flex-1 px-6 pb-8">
-        <h2 className="font-serif text-xl font-bold mb-4">Scoreboard</h2>
-        <div className="wine-card divide-y divide-card-border">
+        {/* Scoreboard */}
+        <h2 className="text-[13px] font-bold text-foreground uppercase tracking-wide mb-3">
+          Scoreboard
+        </h2>
+        <div className="rounded-[16px] bg-card-bg border border-card-border shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] divide-y divide-card-border/40">
           {ranked.map((g, i) => (
             <div
               key={g.id}
-              className={`flex items-center gap-4 px-5 py-4 ${
-                g.id === guestId ? "bg-wine-burgundy/5" : ""
+              className={`flex items-center gap-3.5 px-4 py-3.5 ${
+                g.id === guestId ? "bg-cherry/5" : ""
               }`}
             >
-              <div className="w-8 text-center">
-                {i === 0 ? (
-                  <Crown className="h-6 w-6 text-wine-gold mx-auto" />
-                ) : (
-                  <span className="text-lg font-bold text-muted">
-                    {i + 1}
-                  </span>
-                )}
+              <div className={`h-9 w-9 rounded-[12px] flex items-center justify-center text-[13px] font-bold flex-shrink-0 ${
+                i < 3 ? MEDAL_COLORS[i] : "bg-card-border/30 text-muted"
+              }`}>
+                {i === 0 ? <Crown className="h-4 w-4" /> : i + 1}
               </div>
               <div className="flex-1 min-w-0">
-                <p
-                  className={`font-semibold truncate ${
-                    g.id === guestId ? "text-wine-burgundy" : ""
-                  }`}
-                >
+                <p className={`text-[14px] font-semibold truncate ${
+                  g.id === guestId ? "text-cherry" : "text-foreground"
+                }`}>
                   {g.displayName}
                   {g.id === guestId && (
-                    <span className="text-xs text-muted ml-2">(you)</span>
+                    <span className="text-[11px] text-muted ml-1.5">(you)</span>
                   )}
                 </p>
               </div>
-              <span className="text-lg font-bold tabular-nums">
+              <span className="text-[16px] font-bold tabular-nums text-foreground">
                 {g.totalScore}
               </span>
             </div>
@@ -759,14 +811,14 @@ function CompletedView({
         <div className="mt-8 space-y-3">
           <button
             onClick={onShare}
-            className="w-full py-4 rounded-2xl border-2 border-wine-burgundy text-wine-burgundy font-semibold text-lg flex items-center justify-center gap-2 touch-target active:scale-[0.98]"
+            className="btn-secondary w-full touch-target gap-2 border-2 border-cherry text-cherry font-semibold"
           >
             <Share2 className="h-5 w-5" />
             Share Results
           </button>
           <a
             href="/login"
-            className="block w-full py-4 rounded-2xl bg-wine-burgundy text-white font-semibold text-lg text-center touch-target active:scale-[0.98]"
+            className="btn-primary block text-center touch-target"
           >
             Sign up to save your results
           </a>

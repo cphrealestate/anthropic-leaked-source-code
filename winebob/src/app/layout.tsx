@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "@/lib/AuthProvider";
+import { UniversePortal } from "@/components/shared/UniversePortal";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -20,7 +21,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#FFEEBC",
+  themeColor: "#FEF9F0",
 };
 
 export default function RootLayout({
@@ -30,9 +31,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full antialiased">
-      <body className="min-h-full flex flex-col safe-top">
+      <body className="min-h-full flex flex-col">
         <AuthProvider>
           {children}
+          <UniversePortal />
         </AuthProvider>
       </body>
     </html>
