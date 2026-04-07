@@ -386,45 +386,36 @@ export function FlavorGenomeLayer({ active, mapRef }: Props) {
     // Clear any existing markers first
     clearMarkers();
 
-    for (const profile of REGION_FLAVORS) {
-      const coords = REGION_CITIES[profile.region];
-      if (!coords) continue;
-
-      // Create a container element for the marker
+    // Helper: build marker element for a profile at a given size
+    function buildMarkerEl(profile: FlavorProfile, markerSize: number) {
       const el = document.createElement("div");
-      el.style.width = "50px";
-      el.style.height = "50px";
+      el.style.display = "flex";
+      el.style.flexDirection = "column";
+      el.style.alignItems = "center";
       el.style.cursor = "pointer";
       el.style.transition = "transform 0.15s ease";
-      el.addEventListener("mouseenter", () => {
-        el.style.transform = "scale(1.15)";
-      });
-      el.addEventListener("mouseleave", () => {
-        el.style.transform = "scale(1)";
-      });
+      el.addEventListener("mouseenter", () => { el.style.transform = "scale(1.15)"; });
+      el.addEventListener("mouseleave", () => { el.style.transform = "scale(1)"; });
 
-      // Render the radar chart as inline SVG
-      const size = 50;
       const padding = 4;
-      const cx = size / 2;
-      const cy = size / 2;
-      const r = (size - padding * 2) / 2;
+      const cx = markerSize / 2;
+      const cy = markerSize / 2;
+      const r = (markerSize - padding * 2) / 2;
       const levels = [0.5, 1.0];
 
       const gridPolygons = levels
         .map((level) => {
           const pts = FLAVOR_AXES.map((_, i) => {
-            const angle =
-              (Math.PI * 2 * i) / FLAVOR_AXES.length - Math.PI / 2;
+            const angle = (Math.PI * 2 * i) / FLAVOR_AXES.length - Math.PI / 2;
             return `${cx + r * level * Math.cos(angle)},${cy + r * level * Math.sin(angle)}`;
           }).join(" ");
-          return `<polygon points="${pts}" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/>`;
+          return `<polygon points="${pts}" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>`;
         })
         .join("");
 
       const axisLines = FLAVOR_AXES.map((_, i) => {
         const angle = (Math.PI * 2 * i) / FLAVOR_AXES.length - Math.PI / 2;
-        return `<line x1="${cx}" y1="${cy}" x2="${cx + r * Math.cos(angle)}" y2="${cy + r * Math.sin(angle)}" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/>`;
+        return `<line x1="${cx}" y1="${cy}" x2="${cx + r * Math.cos(angle)}" y2="${cy + r * Math.sin(angle)}" stroke="rgba(255,255,255,0.12)" stroke-width="0.5"/>`;
       }).join("");
 
       const dataPoints = FLAVOR_AXES.map((axis, i) => {
@@ -433,19 +424,72 @@ export function FlavorGenomeLayer({ active, mapRef }: Props) {
         return `${cx + r * val * Math.cos(angle)},${cy + r * val * Math.sin(angle)}`;
       }).join(" ");
 
+      // Dominant trait determines accent color
+      const maxAxis = FLAVOR_AXES.reduce((a, b) => (profile[a] > profile[b] ? a : b));
+      const AXIS_COLORS: Record<string, string> = {
+        acidity: "rgba(255,220,50,0.45)",
+        tannin: "rgba(180,50,50,0.45)",
+        body: "rgba(160,80,40,0.45)",
+        fruit: "rgba(220,60,80,0.45)",
+        earth: "rgba(140,120,80,0.45)",
+        floral: "rgba(200,120,220,0.45)",
+      };
+      const fillColor = AXIS_COLORS[maxAxis] ?? "rgba(116,7,14,0.40)";
+      const AXIS_STROKES: Record<string, string> = {
+        acidity: "#d4b830",
+        tannin: "#b43232",
+        body: "#a05028",
+        fruit: "#dc3c50",
+        earth: "#8c7850",
+        floral: "#c878dc",
+      };
+      const strokeColor = AXIS_STROKES[maxAxis] ?? "#74070E";
+
       el.innerHTML = `
-        <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-          <circle cx="${cx}" cy="${cy}" r="${r}" fill="rgba(26,20,18,0.6)" stroke="none"/>
+        <svg width="${markerSize}" height="${markerSize}" viewBox="0 0 ${markerSize} ${markerSize}" style="display:block;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.4))">
+          <circle cx="${cx}" cy="${cy}" r="${r}" fill="rgba(26,20,18,0.85)" stroke="rgba(255,255,255,0.12)" stroke-width="0.5"/>
           ${gridPolygons}
           ${axisLines}
-          <polygon points="${dataPoints}" fill="rgba(116,7,14,0.30)" stroke="#74070E" stroke-width="1"/>
+          <polygon points="${dataPoints}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${markerSize > 40 ? 1.5 : 1}"/>
         </svg>
+        <span style="
+          display:block;
+          margin-top:2px;
+          font-size:${markerSize > 40 ? 10 : 8}px;
+          font-weight:700;
+          color:white;
+          text-align:center;
+          text-shadow:0 1px 4px rgba(0,0,0,0.8);
+          white-space:nowrap;
+          max-width:${markerSize * 2}px;
+          overflow:hidden;
+          text-overflow:ellipsis;
+          pointer-events:none;
+        ">${profile.region}</span>
       `;
+
+      return el;
+    }
+
+    // Determine marker size based on zoom
+    function sizeForZoom(zoom: number): number {
+      if (zoom < 3) return 30;
+      if (zoom < 4) return 36;
+      if (zoom < 5) return 42;
+      return 50;
+    }
+
+    let currentSize = sizeForZoom(map.getZoom());
+
+    for (const profile of REGION_FLAVORS) {
+      const coords = REGION_CITIES[profile.region];
+      if (!coords) continue;
+
+      const el = buildMarkerEl(profile, currentSize);
 
       el.addEventListener("click", (e) => {
         e.stopPropagation();
         handleMarkerClick(profile);
-        // Fly to this region
         map.flyTo({ center: coords, zoom: 6, duration: 1200 });
       });
 
@@ -456,7 +500,32 @@ export function FlavorGenomeLayer({ active, mapRef }: Props) {
       markersRef.current.push(marker);
     }
 
+    // Resize markers on zoom
+    const onZoom = () => {
+      const newSize = sizeForZoom(map.getZoom());
+      if (newSize === currentSize) return;
+      currentSize = newSize;
+
+      // Rebuild all marker elements
+      markersRef.current.forEach((marker, idx) => {
+        const profile = REGION_FLAVORS[idx];
+        if (!profile) return;
+        const newEl = buildMarkerEl(profile, newSize);
+        newEl.addEventListener("click", (e) => {
+          e.stopPropagation();
+          handleMarkerClick(profile);
+          const coords = REGION_CITIES[profile.region];
+          if (coords) map.flyTo({ center: coords, zoom: 6, duration: 1200 });
+        });
+        (marker as unknown as { _element: HTMLElement })._element.replaceWith(newEl);
+        // Update internal reference
+        (marker as unknown as { _element: HTMLElement })._element = newEl;
+      });
+    };
+    map.on("zoom", onZoom);
+
     return () => {
+      map.off("zoom", onZoom);
       clearMarkers();
     };
   }, [active, mapReady, mapRef, clearMarkers, handleMarkerClick]);

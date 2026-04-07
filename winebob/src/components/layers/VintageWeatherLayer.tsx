@@ -221,19 +221,28 @@ export function VintageWeatherLayer({ active, mapRef, region }: Props) {
     try {
       if (map.getLayer("wine-regions-fill")) {
         map.setPaintProperty("wine-regions-fill", "fill-color", color);
-        map.setPaintProperty("wine-regions-fill", "fill-opacity", 0.55);
+        map.setPaintProperty("wine-regions-fill", "fill-opacity", 0.65);
         map.setLayoutProperty("wine-regions-fill", "visibility", "visible");
+      }
+      // Also color the region outline to match temperature
+      if (map.getLayer("wine-regions-outline")) {
+        map.setPaintProperty("wine-regions-outline", "line-color", color);
+        map.setPaintProperty("wine-regions-outline", "line-opacity", 0.9);
       }
     } catch { /* layer not ready */ }
 
     return () => {
-      // Restore default fill-color on cleanup
+      // Restore default styles on cleanup
       try {
         if (map.getLayer("wine-regions-fill")) {
           map.setPaintProperty("wine-regions-fill", "fill-color", ["get", "color"]);
           map.setPaintProperty("wine-regions-fill", "fill-opacity", [
             "case", ["boolean", ["feature-state", "hover"], false], 0.55, 0.35,
           ]);
+        }
+        if (map.getLayer("wine-regions-outline")) {
+          map.setPaintProperty("wine-regions-outline", "line-color", ["get", "color"]);
+          map.setPaintProperty("wine-regions-outline", "line-opacity", 0.6);
         }
       } catch { /* ignore */ }
     };
@@ -272,9 +281,14 @@ export function VintageWeatherLayer({ active, mapRef, region }: Props) {
 
   // ── Scroll year picker to selected year on mount ──
   useEffect(() => {
-    if (!yearScrollRef.current) return;
-    const el = yearScrollRef.current.querySelector(`[data-year="${selectedYear}"]`);
-    if (el) el.scrollIntoView({ inline: "center", behavior: "smooth" });
+    if (!active) return;
+    // Small delay to ensure DOM is rendered before scrolling
+    const timer = setTimeout(() => {
+      if (!yearScrollRef.current) return;
+      const el = yearScrollRef.current.querySelector(`[data-year="${selectedYear}"]`);
+      if (el) el.scrollIntoView({ inline: "center", behavior: "smooth" });
+    }, 100);
+    return () => clearTimeout(timer);
   }, [active, selectedYear]);
 
   if (!active) return null;
@@ -282,7 +296,7 @@ export function VintageWeatherLayer({ active, mapRef, region }: Props) {
   // No region selected
   if (!region) {
     return (
-      <div className="absolute bottom-32 left-1/2 -translate-x-1/2 z-30">
+      <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-30">
         <div className="px-5 py-3 rounded-[14px] bg-[#1A1412]/85 backdrop-blur-xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
           <p className="text-[13px] text-white/60 font-medium text-center whitespace-nowrap">
             Zoom into a wine region to explore its vintage weather
@@ -295,61 +309,50 @@ export function VintageWeatherLayer({ active, mapRef, region }: Props) {
   const currentDay = weatherData?.[dayIndex];
   const currentGDD = gddArray[dayIndex] ?? 0;
   const totalDays = weatherData?.length ?? 0;
-  const isRainy = currentDay ? currentDay.precipitation > 5 : false;
+  const isRainy = currentDay ? currentDay.precipitation > 2 : false;
 
   return (
     <>
-      {/* ── Data Card (top-right) ── */}
+      {/* ── Data Card (right side, below city pills) ── */}
       {weatherData && currentDay && (
-        <div className="absolute top-16 right-4 z-30 w-[200px]">
-          <div className="rounded-[14px] bg-[#1A1412]/85 backdrop-blur-xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.3)] p-3.5">
+        <div className="absolute top-28 right-3 z-20 w-[170px]">
+          <div className="rounded-[12px] bg-[#1A1412]/85 backdrop-blur-xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.3)] p-3">
             {/* Date */}
-            <p className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-1">
-              {region} &middot; {selectedYear}
+            <p className="text-[9px] font-bold text-white/40 uppercase tracking-wider">
+              {region} · {selectedYear}
             </p>
-            <p className="text-[17px] font-bold text-white tracking-tight mb-3">
+            <p className="text-[15px] font-bold text-white tracking-tight mb-2">
               {formatDate(currentDay.date)}
             </p>
 
-            {/* Temperature */}
-            <div className="flex items-baseline gap-2 mb-1.5">
-              <div>
-                <p className="text-[10px] text-white/40">High</p>
-                <p className="text-[15px] font-bold text-white">{currentDay.tempMax.toFixed(1)}°</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-white/40">Low</p>
-                <p className="text-[15px] font-bold text-white/70">{currentDay.tempMin.toFixed(1)}°</p>
+            {/* Temperature with color indicator */}
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: tempToColor((currentDay.tempMax + currentDay.tempMin) / 2) }} />
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-[14px] font-bold text-white">{currentDay.tempMax.toFixed(0)}°</span>
+                <span className="text-[12px] text-white/50">{currentDay.tempMin.toFixed(0)}°</span>
               </div>
             </div>
 
             {/* Precipitation */}
-            <div className="mb-2.5">
-              <p className="text-[10px] text-white/40">Precipitation</p>
-              <p className={`text-[13px] font-bold ${isRainy ? "text-blue-400" : "text-white/70"}`}>
-                {currentDay.precipitation.toFixed(1)} mm
-                {isRainy && " 🌧"}
-              </p>
-            </div>
+            <p className={`text-[11px] font-semibold mb-2 ${isRainy ? "text-blue-400" : "text-white/50"}`}>
+              {currentDay.precipitation > 0 ? `${currentDay.precipitation.toFixed(1)} mm${isRainy ? " 🌧" : ""}` : "No rain"}
+            </p>
 
-            {/* GDD */}
+            {/* GDD + milestone */}
             <div className="pt-2 border-t border-white/[0.06]">
-              <p className="text-[10px] text-white/40">Growing Degree Days</p>
-              <p className="text-[17px] font-bold text-cherry">{Math.round(currentGDD)}</p>
-              {/* Current milestone */}
+              <div className="flex items-baseline justify-between">
+                <span className="text-[9px] text-white/40">GDD</span>
+                <span className="text-[14px] font-bold text-cherry">{Math.round(currentGDD)}</span>
+              </div>
               {(() => {
                 const reached = milestonePositions.filter(
                   (m) => m.dayIndex >= 0 && m.dayIndex <= dayIndex,
                 );
                 const current = reached[reached.length - 1];
-                if (current) {
-                  return (
-                    <p className="text-[9px] font-bold text-cherry mt-0.5">
-                      {current.label}
-                    </p>
-                  );
-                }
-                return null;
+                return current ? (
+                  <p className="text-[9px] font-bold text-cherry mt-0.5">{current.label}</p>
+                ) : null;
               })()}
             </div>
           </div>
@@ -367,11 +370,28 @@ export function VintageWeatherLayer({ active, mapRef, region }: Props) {
         </div>
       )}
 
+      {/* ── Temperature color legend ── */}
+      {weatherData && (
+        <div className="absolute top-28 left-3 z-20">
+          <div className="rounded-[10px] bg-[#1A1412]/80 backdrop-blur-xl border border-white/[0.08] p-2">
+            <p className="text-[8px] font-bold text-white/40 uppercase tracking-wider mb-1.5">Temp °C</p>
+            <div className="flex flex-col gap-px">
+              {[35, 30, 25, 20, 15, 10, 5].map((t) => (
+                <div key={t} className="flex items-center gap-1.5">
+                  <div className="w-3 h-2 rounded-sm flex-shrink-0" style={{ backgroundColor: tempToColor(t) }} />
+                  <span className="text-[8px] text-white/50 tabular-nums">{t}°</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Bottom controls container ── */}
-      <div className="absolute bottom-36 left-4 right-4 z-30 flex flex-col gap-2.5">
+      <div className="absolute bottom-28 left-4 right-4 z-30 flex flex-col gap-2">
         {/* ── Timeline Scrubber ── */}
         {weatherData && (
-          <div className="rounded-[14px] bg-[#1A1412]/85 backdrop-blur-xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.3)] px-3.5 py-3">
+          <div className="rounded-[10px] bg-[#1A1412]/85 backdrop-blur-xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.3)] px-3 py-2">
             {/* Month labels */}
             <div className="flex justify-between mb-1.5 px-0.5">
               {MONTHS.map((m) => (
@@ -405,24 +425,29 @@ export function VintageWeatherLayer({ active, mapRef, region }: Props) {
                 style={{ width: `${totalDays > 1 ? (dayIndex / (totalDays - 1)) * 100 : 0}%` }}
               />
 
-              {/* Milestone ticks */}
-              {milestonePositions.map((m) =>
-                m.dayIndex >= 0 ? (
+              {/* Milestone ticks — abbreviated to prevent overlap */}
+              {milestonePositions.map((m) => {
+                if (m.dayIndex < 0) return null;
+                const pct = (m.dayIndex / (totalDays - 1)) * 100;
+                const abbrev: Record<string, string> = {
+                  "Bud Break": "Bud",
+                  "Flowering": "Bloom",
+                  "Véraison": "Vér.",
+                  "Harvest": "Harv.",
+                };
+                return (
                   <div
                     key={m.label}
-                    className="absolute top-0 flex flex-col items-center"
-                    style={{
-                      left: `${(m.dayIndex / (totalDays - 1)) * 100}%`,
-                      transform: "translateX(-50%)",
-                    }}
+                    className="absolute top-0 flex flex-col items-center pointer-events-none"
+                    style={{ left: `${pct}%`, transform: "translateX(-50%)" }}
                   >
-                    <span className="text-[8px] font-bold text-cherry leading-none whitespace-nowrap">
-                      {m.label}
+                    <span className="text-[7px] font-bold text-cherry/80 leading-none whitespace-nowrap">
+                      {abbrev[m.label] ?? m.label}
                     </span>
-                    <div className="w-px h-2.5 bg-cherry/50 mt-px" />
+                    <div className="w-px h-2 bg-cherry/40 mt-px" />
                   </div>
-                ) : null,
-              )}
+                );
+              })}
 
               {/* Thumb */}
               <div
@@ -477,10 +502,10 @@ export function VintageWeatherLayer({ active, mapRef, region }: Props) {
         )}
 
         {/* ── Year Picker ── */}
-        <div className="rounded-[14px] bg-[#1A1412]/70 backdrop-blur-xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.3)] py-2 px-1">
+        <div className="rounded-[10px] bg-[#1A1412]/70 backdrop-blur-xl border border-white/[0.08] py-1.5 px-1">
           <div
             ref={yearScrollRef}
-            className="flex gap-1 overflow-x-auto scrollbar-none px-1"
+            className="flex gap-0.5 overflow-x-auto scrollbar-none px-0.5"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
             {YEARS.map((year) => (
@@ -488,9 +513,9 @@ export function VintageWeatherLayer({ active, mapRef, region }: Props) {
                 key={year}
                 data-year={year}
                 onClick={() => setSelectedYear(year)}
-                className={`flex-shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold transition-all active:scale-95 ${
+                className={`flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold transition-all active:scale-95 ${
                   year === selectedYear
-                    ? "bg-cherry text-white shadow-md shadow-cherry/30"
+                    ? "bg-cherry text-white shadow-sm shadow-cherry/30"
                     : "bg-transparent text-white/50 hover:text-white/70 hover:bg-white/[0.06]"
                 }`}
               >

@@ -104,7 +104,7 @@ export function MapLayerDrawer({ layers, onToggle, className = "" }: Props) {
           transition-all duration-300 ease-out
           ${open ? "opacity-100 scale-100 pointer-events-auto" : "opacity-0 scale-95 pointer-events-none"}
         `}
-        style={{ width: 260 }}
+        style={{ width: 280 }}
       >
         <div className="rounded-[14px] bg-[#1A1412]/85 backdrop-blur-xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.3)] overflow-hidden pointer-events-auto">
           {/* Panel header */}
@@ -149,7 +149,7 @@ export function MapLayerDrawer({ layers, onToggle, className = "" }: Props) {
                         <p className="text-[13px] font-bold text-white leading-tight truncate">
                           {layer.name}
                         </p>
-                        <p className="text-[10px] text-white/40 leading-snug truncate">
+                        <p className="text-[10px] text-white/40 leading-snug line-clamp-2">
                           {layer.description}
                         </p>
                         {!layer.available && layer.availableHint && (
