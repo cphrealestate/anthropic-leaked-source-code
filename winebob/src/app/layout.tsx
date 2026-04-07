@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { DM_Sans, Playfair_Display } from "next/font/google";
 import { AuthProvider } from "@/lib/AuthProvider";
+import { UniversePortal } from "@/components/shared/UniversePortal";
 import "./globals.css";
 
 const sans = DM_Sans({
@@ -48,6 +49,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <AuthProvider>
           {children}
+          <UniversePortal />
         </AuthProvider>
       </body>
     </html>
