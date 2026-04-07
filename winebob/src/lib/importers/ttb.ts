@@ -149,13 +149,34 @@ function parseAbv(content: string | undefined | null): number | null {
   return null;
 }
 
+// TTB class/type numeric codes (when classType is a code rather than text).
+// See: https://www.ttb.gov/images/pdfs/p51908.pdf
+const TTB_CLASS_CODES: Record<string, string> = {
+  "2020": "red",       // Table Wine
+  "2021": "red",       // Table Wine - Red
+  "2022": "white",     // Table Wine - White
+  "2023": "rosé",      // Table Wine - Rosé
+  "2030": "dessert",   // Dessert Wine
+  "2040": "sparkling", // Sparkling Wine / Champagne
+  "2050": "fortified", // Fortified Wine
+  "2060": "dessert",   // Special Natural Wine
+  "2070": "red",       // Aperitif Wine
+};
+
 /**
- * Infer wine type from TTB classType string.
+ * Infer wine type from TTB classType string or numeric code.
  */
 function inferWineType(classType: string | undefined | null): string {
   if (!classType) return "red"; // default
 
-  const upper = classType.toUpperCase();
+  const trimmed = classType.trim();
+
+  // Fallback: if classType is a numeric code, use the code mapping
+  if (/^\d+$/.test(trimmed)) {
+    return TTB_CLASS_CODES[trimmed] ?? "red";
+  }
+
+  const upper = trimmed.toUpperCase();
 
   if (upper.includes("SPARKLING") || upper.includes("CHAMPAGNE")) {
     return "sparkling";
@@ -481,19 +502,24 @@ async function importWines(
     recordsFailed: 0,
   };
 
-  // Load existing wines for dedup by fingerprint (name+producer)
+  // Load existing wines for dedup — only wines whose name appears in the
+  // current import batch (avoids loading the entire wines table into memory).
   console.log("  Loading existing wines for deduplication...");
-  const existingWines = await prisma.wine.findMany({
-    select: { name: true, producer: true },
-  });
+  const batchNames = [...new Set(wines.map((w) => w.name))];
+  const existingSet = new Set<string>();
 
-  const existingSet = new Set(
-    existingWines.map(
-      (w: { name: string; producer: string }) =>
-        `${w.name.toLowerCase()}|${w.producer.toLowerCase()}`
-    )
-  );
-  console.log(`  Found ${existingSet.size} existing wines.`);
+  const NAME_BATCH_SIZE = 500;
+  for (let i = 0; i < batchNames.length; i += NAME_BATCH_SIZE) {
+    const nameBatch = batchNames.slice(i, i + NAME_BATCH_SIZE);
+    const existingWines = await prisma.wine.findMany({
+      where: { name: { in: nameBatch } },
+      select: { name: true, producer: true },
+    });
+    for (const w of existingWines) {
+      existingSet.add(`${w.name.toLowerCase()}|${w.producer.toLowerCase()}`);
+    }
+  }
+  console.log(`  Found ${existingSet.size} existing wines matching this batch.`);
 
   // Filter out duplicates
   const toInsert: ParsedTtbWine[] = [];
@@ -518,6 +544,8 @@ async function importWines(
     const totalBatches = Math.ceil(toInsert.length / BATCH_SIZE);
 
     try {
+      // Note: skipDuplicates is intentionally omitted — it may not work with
+      // the Neon HTTP adapter, and we already do manual dedup above.
       await prisma.wine.createMany({
         data: batch.map((wine) => ({
           name: wine.name,
@@ -535,7 +563,6 @@ async function importWines(
           importBatchId,
           isPublic: true,
         })),
-        skipDuplicates: true,
       });
 
       stats.recordsCreated += batch.length;
