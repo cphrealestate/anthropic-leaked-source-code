@@ -20,11 +20,12 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts      Account[]
-  sessions      Session[]
-  hostedEvents  BlindTastingEvent[]
-  favorites     WineFavorite[]
-  addedWines    Wine[]     @relation("AddedWines")
+  accounts          Account[]
+  sessions          Session[]
+  hostedEvents      BlindTastingEvent[]
+  favorites         WineFavorite[]
+  addedWines        Wine[]             @relation("AddedWines")
+  sommelierProfile  SommelierProfile?
 }
 
 model Account {
@@ -85,6 +86,7 @@ model Wine {
   updatedAt   DateTime @default(now()) @updatedAt
 
   blindWines  BlindWine[]
+  liveWines   LiveWine[]
   favorites   WineFavorite[]
   addedBy     User?    @relation("AddedWines", fields: [addedById], references: [id])
 
@@ -256,4 +258,143 @@ model BlindGuess {
   @@unique([eventId, guestId, winePosition])
   @@index([eventId])
   @@index([guestId])
+}
+
+// ============ SOMMELIER PROFILES ============
+
+model SommelierProfile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  displayName   String
+  bio           String?
+  avatar        String?  // profile image URL
+  expertise     String[] // e.g. ["italian", "french", "natural", "sparkling"]
+  certifications String[] // e.g. ["WSET Level 3", "Court of Master Sommeliers"]
+  totalEvents   Int      @default(0)
+  totalViewers  Int      @default(0)
+  rating        Float    @default(0) // avg rating from viewers (1-5)
+  ratingCount   Int      @default(0)
+  verified      Boolean  @default(false) // Winebob-verified sommelier
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  liveEvents    LiveEvent[]
+
+  @@index([verified])
+  @@index([rating])
+}
+
+// ============ LIVE / GLOBAL EVENTS ============
+
+model LiveEvent {
+  id              String   @id @default(cuid())
+  sommelierId     String
+  title           String
+  description     String?
+  coverImage      String?
+
+  // Access control
+  isPublic        Boolean  @default(true)  // true = anyone can join, false = need code
+  joinCode        String?  @unique         // only for private events
+  maxParticipants Int?                     // null = unlimited
+
+  // Scheduling
+  scheduledAt     DateTime                 // when event is planned to start
+  status          String   @default("scheduled") // scheduled, live, completed, cancelled
+  startedAt       DateTime?
+  completedAt     DateTime?
+
+  // Config
+  guessFields     String[]  // which fields viewers guess on
+  scoringConfig   Json?     // scoring weights
+  difficulty      String    @default("intermediate")
+  showCrowdStats  Boolean   @default(true) // show aggregated crowd guesses
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+
+  sommelier       SommelierProfile   @relation(fields: [sommelierId], references: [id], onDelete: Cascade)
+  wines           LiveWine[]
+  participants    LiveParticipant[]
+  guesses         LiveGuess[]
+
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([isPublic, status])
+  @@index([sommelierId])
+}
+
+model LiveWine {
+  id          String   @id @default(cuid())
+  eventId     String
+  wineId      String
+  position    Int      // flight order (1, 2, 3...)
+  revealed    Boolean  @default(false)
+  revealedAt  DateTime?
+
+  event       LiveEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  wine        Wine      @relation(fields: [wineId], references: [id])
+  hints       LiveHint[]
+
+  @@unique([eventId, position])
+  @@index([eventId])
+}
+
+model LiveHint {
+  id          String   @id @default(cuid())
+  wineId      String   // LiveWine id
+  position    Int      // hint order (1, 2, 3...)
+  content     String   // "Mørk rubinrød farve..."
+  hintType    String   // color, aroma, taste, texture, origin, other
+  revealed    Boolean  @default(false)
+  revealedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  wine        LiveWine @relation(fields: [wineId], references: [id], onDelete: Cascade)
+
+  @@unique([wineId, position])
+  @@index([wineId])
+}
+
+model LiveParticipant {
+  id            String   @id @default(cuid())
+  eventId       String
+  displayName   String
+  userId        String?  // null for anonymous public participants
+  sessionToken  String   @unique @default(cuid()) // cookie-based identity
+  joinedAt      DateTime @default(now())
+
+  event         LiveEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  guesses       LiveGuess[]
+
+  @@index([eventId])
+  @@index([userId])
+}
+
+model LiveGuess {
+  id              String   @id @default(cuid())
+  eventId         String
+  participantId   String
+  winePosition    Int
+
+  guessedGrape    String?
+  guessedRegion   String?
+  guessedCountry  String?
+  guessedVintage  Int?
+  guessedProducer String?
+  guessedType     String?
+  guessedPrice    Float?
+  notes           String?
+
+  score           Int      @default(0)
+  submittedAt     DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+
+  event           LiveEvent       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  participant     LiveParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, participantId, winePosition])
+  @@index([eventId])
+  @@index([participantId])
 }
