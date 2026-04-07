@@ -96,6 +96,48 @@ model Wine {
   @@index([isPublic])
 }
 
+// ============ WINERIES ============
+
+model Winery {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  history     String?  // longer story about the winery
+  founded     Int?     // year founded
+  owner       String?
+  website     String?
+  email       String?
+  phone       String?
+  image       String?  // hero image URL
+  logo        String?
+
+  // Location
+  lat         Float
+  lng         Float
+  address     String?
+  region      String
+  country     String
+
+  // Business
+  featured    Boolean  @default(false) // paid/sponsored
+  verified    Boolean  @default(false)
+  visitBooking String? // URL for booking visits
+
+  // Production
+  annualBottles  Int?
+  vineyardSize   String? // e.g. "45 hectares"
+  grapeVarieties String[] // main grapes they grow
+  wineStyles     String[] // e.g. ["red", "white", "sparkling"]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  @@index([region, country])
+  @@index([featured])
+  @@index([lat, lng])
+}
+
 // ============ WINE FAVORITES (personal cellar) ============
 
 model WineFavorite {
