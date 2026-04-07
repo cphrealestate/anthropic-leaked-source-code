@@ -18,8 +18,8 @@ export default function HomePage() {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col safe-top safe-bottom">
-      {/* ══════════ TOP HALF — Butter zone (Join / Host) ══════════ */}
+    <div className="fixed inset-0 flex flex-col md:flex-row safe-top safe-bottom">
+      {/* ══════════ TOP / LEFT — Butter zone (Join / Host) ══════════ */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 bg-background relative overflow-hidden">
         {/* Subtle radial glow */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[300px] h-[300px] bg-widget-wine/20 rounded-full blur-[80px] pointer-events-none" />
@@ -86,8 +86,8 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ══════════ BOTTOM HALF — Cherry zone (Explore universe) ══════════ */}
-      <div className="flex-1 bg-cherry-gradient flex flex-col items-center justify-center px-6 relative overflow-hidden">
+      {/* ══════════ BOTTOM / RIGHT — Cherry zone (Explore universe) ══════════ */}
+      <div className="flex-1 bg-cherry-gradient flex flex-col items-center justify-center px-6 relative overflow-hidden md:rounded-l-[40px]">
         {/* Decorative glow */}
         <div className="absolute bottom-1/4 left-1/2 -translate-x-1/2 w-[300px] h-[300px] bg-white/5 rounded-full blur-[80px] pointer-events-none" />
 
