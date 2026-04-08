@@ -1,112 +1,92 @@
 import Link from "next/link";
 import { getWines } from "@/lib/wineryActions";
-import { Plus, Wine, Search } from "lucide-react";
+import { Plus, Download, Upload, Filter } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-const TYPE_COLORS: Record<string, string> = {
-  red: "#74070E", white: "#C8A255", rosé: "#C47080",
-  sparkling: "#B8A840", orange: "#C87840", fortified: "#8B4513", dessert: "#8B6914",
-};
+const TC: Record<string, string> = { red: "#74070E", white: "#C8A255", rosé: "#C47080", sparkling: "#B8A840", orange: "#C87840", fortified: "#8B4513", dessert: "#8B6914" };
+const PL: Record<string, string> = { budget: "$", mid: "$$", premium: "$$$", luxury: "$$$$" };
 
-export default async function WinesAdminPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-}) {
+export default async function WinesAdminPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const params = await searchParams;
   const search = typeof params.search === "string" ? params.search : undefined;
-  const wineryId = typeof params.wineryId === "string" ? params.wineryId : undefined;
+  const type = typeof params.type === "string" ? params.type : undefined;
 
   let wines: Awaited<ReturnType<typeof getWines>> = [];
-  try {
-    wines = await getWines({ search, wineryId });
-  } catch { /* DB unavailable */ }
+  try { wines = await getWines({ search, type }); } catch {}
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
+    <div className="-mx-6 -mt-8">
+      {/* Top bar */}
+      <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-card-border/30">
         <div>
-          <h1 className="text-[22px] font-bold text-foreground" style={{ fontFamily: "Georgia, serif" }}>Wines</h1>
-          <p className="text-[13px] text-muted mt-1">{wines.length} wines in the database</p>
+          <h1 className="text-[15px] font-bold text-foreground">Wines</h1>
+          <p className="text-[11px] text-muted">{wines.length} wines · {wines.filter(w => w.winery).length} linked to producers</p>
         </div>
-        <Link
-          href="/admin/wines/new"
-          className="flex items-center gap-2 h-10 px-4 rounded-[10px] bg-cherry text-white text-[13px] font-semibold hover:bg-cherry/90 transition-colors"
-        >
-          <Plus className="h-4 w-4" /> Add Wine
-        </Link>
+        <div className="flex items-center gap-1.5">
+          <button className="h-7 px-2.5 rounded-[5px] border border-card-border/50 text-[10px] font-medium text-muted flex items-center gap-1 hover:bg-butter"><Download className="h-3 w-3" /> Export</button>
+          <button className="h-7 px-2.5 rounded-[5px] border border-card-border/50 text-[10px] font-medium text-muted flex items-center gap-1 hover:bg-butter"><Upload className="h-3 w-3" /> Import</button>
+          <Link href="/admin/wines/new" className="h-7 px-3 rounded-[5px] bg-cherry text-white text-[10px] font-semibold flex items-center gap-1 hover:bg-cherry/90">
+            <Plus className="h-3 w-3" /> Add wine
+          </Link>
+        </div>
       </div>
 
-      {/* Search */}
-      <form className="mb-4">
-        <div className="flex gap-2">
-          <div className="flex-1 flex items-center gap-2 h-10 px-3 rounded-[10px] bg-white border border-card-border/40">
-            <Search className="h-4 w-4 text-muted" />
-            <input
-              name="search"
-              defaultValue={search}
-              placeholder="Search wines or producers..."
-              className="flex-1 text-[13px] outline-none bg-transparent"
-            />
-          </div>
-          <button type="submit" className="h-10 px-4 rounded-[10px] bg-foreground text-white text-[12px] font-semibold">Search</button>
+      {/* Filters */}
+      <div className="px-5 py-2 flex items-center gap-3 border-b border-card-border/20">
+        <form className="flex items-center gap-2">
+          <input name="search" defaultValue={search} placeholder="Search wines, producers..." className="h-6 w-52 px-2 text-[11px] rounded-[4px] border border-card-border/40 outline-none focus:border-cherry/30" />
+          <button className="h-6 px-2 rounded-[4px] text-[10px] text-muted border border-card-border/40 flex items-center gap-1 hover:bg-butter"><Filter className="h-2.5 w-2.5" /> Filter</button>
+        </form>
+        <div className="flex items-center gap-1 ml-auto">
+          {["red", "white", "rosé", "sparkling"].map(t => (
+            <Link key={t} href={`/admin/wines?type=${t}`} className={`h-5 px-2 rounded-[3px] text-[9px] font-semibold capitalize ${type === t ? "bg-cherry text-white" : "text-muted hover:bg-butter border border-card-border/30"}`}>{t}</Link>
+          ))}
+          {type && <Link href="/admin/wines" className="h-5 px-2 rounded-[3px] text-[9px] text-cherry font-semibold hover:bg-cherry/5">Clear</Link>}
         </div>
-      </form>
+      </div>
 
-      <div className="bg-white rounded-[12px] border border-card-border/40 overflow-hidden">
-        <table className="w-full text-left">
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-[11px]">
           <thead>
-            <tr className="border-b border-card-border/30 text-[11px] font-bold text-muted uppercase tracking-wider">
-              <th className="px-4 py-3">Wine</th>
-              <th className="px-4 py-3">Producer</th>
-              <th className="px-4 py-3">Type</th>
-              <th className="px-4 py-3">Appellation</th>
-              <th className="px-4 py-3">Price</th>
-              <th className="px-4 py-3"></th>
+            <tr className="border-b border-card-border/30 bg-butter/50">
+              <th className="w-8 px-2 py-1.5 text-center"><input type="checkbox" className="h-3 w-3 accent-cherry" /></th>
+              <th className="text-left px-2 py-1.5 text-[9px] font-bold text-muted uppercase tracking-wider">Wine</th>
+              <th className="text-left px-2 py-1.5 text-[9px] font-bold text-muted uppercase tracking-wider w-[130px]">Producer</th>
+              <th className="text-left px-2 py-1.5 text-[9px] font-bold text-muted uppercase tracking-wider w-[45px]">Type</th>
+              <th className="text-left px-2 py-1.5 text-[9px] font-bold text-muted uppercase tracking-wider w-[60px]">Vintage</th>
+              <th className="text-left px-2 py-1.5 text-[9px] font-bold text-muted uppercase tracking-wider w-[130px]">Appellation</th>
+              <th className="text-left px-2 py-1.5 text-[9px] font-bold text-muted uppercase tracking-wider w-[100px]">Grapes</th>
+              <th className="text-center px-2 py-1.5 text-[9px] font-bold text-muted uppercase tracking-wider w-[45px]">Price</th>
+              <th className="text-center px-2 py-1.5 text-[9px] font-bold text-muted uppercase tracking-wider w-[50px]">Source</th>
+              <th className="w-8"></th>
             </tr>
           </thead>
           <tbody>
             {wines.map((w) => (
-              <tr key={w.id} className="border-b border-card-border/20 hover:bg-butter/50 transition-colors">
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-[3px] h-8 rounded-full flex-shrink-0" style={{ background: TYPE_COLORS[w.type] || "#8C7E6E" }} />
-                    <div>
-                      <p className="text-[13px] font-semibold text-foreground">{w.name}</p>
-                      <p className="text-[10px] text-muted">{w.grapes.join(", ")}{w.vintage ? ` · ${w.vintage}` : ""}</p>
-                    </div>
+              <tr key={w.id} className="border-b border-card-border/10 hover:bg-blue-50/30 group">
+                <td className="px-2 py-[5px] text-center"><input type="checkbox" className="h-3 w-3 accent-cherry" /></td>
+                <td className="px-2 py-[5px]">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-[2px] h-3.5 rounded-full flex-shrink-0" style={{ background: TC[w.type] || "#8C7E6E" }} />
+                    <span className="font-semibold text-foreground truncate max-w-[250px]">{w.name}</span>
                   </div>
                 </td>
-                <td className="px-4 py-3">
-                  {w.winery ? (
-                    <Link href={`/producers/${w.winery.slug}`} className="text-[12px] font-semibold text-cherry hover:underline">
-                      {w.winery.name}
-                    </Link>
-                  ) : (
-                    <span className="text-[12px] text-muted">{w.producer}</span>
-                  )}
+                <td className="px-2 py-[5px]">
+                  {w.winery ? <Link href={`/producers/${w.winery.slug}`} className="text-cherry hover:underline truncate block max-w-[120px]">{w.winery.name}</Link> : <span className="text-muted truncate block max-w-[120px]">{w.producer}</span>}
                 </td>
-                <td className="px-4 py-3">
-                  <span className="text-[11px] font-semibold capitalize" style={{ color: TYPE_COLORS[w.type] || "#8C7E6E" }}>{w.type}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="text-[11px] text-muted">{w.appellation || "—"}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className="text-[11px] font-semibold text-foreground">{w.priceRange || "—"}</span>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <Link href={`/wines/${w.id}`} className="text-[11px] font-semibold text-cherry hover:underline">View</Link>
-                </td>
+                <td className="px-2 py-[5px] capitalize font-medium" style={{ color: TC[w.type] || "#8C7E6E" }}>{w.type}</td>
+                <td className="px-2 py-[5px] text-muted">{w.vintage || "NV"}</td>
+                <td className="px-2 py-[5px] text-muted truncate max-w-[130px]">{w.appellation || "—"}</td>
+                <td className="px-2 py-[5px] text-muted truncate max-w-[100px]">{w.grapes.slice(0, 2).join(", ") || "—"}</td>
+                <td className="px-2 py-[5px] text-center font-semibold">{PL[w.priceRange ?? ""] || "—"}</td>
+                <td className="px-2 py-[5px] text-center"><span className="text-[8px] text-muted bg-muted/[0.08] px-1 py-0.5 rounded">{w.source}</span></td>
+                <td className="px-2 py-[5px] text-right opacity-0 group-hover:opacity-100"><span className="text-muted cursor-pointer hover:text-foreground">···</span></td>
               </tr>
             ))}
             {wines.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-[13px] text-muted">
-                  {search ? `No wines matching "${search}"` : "No wines yet. Add your first one."}
-                </td>
-              </tr>
+              <tr><td colSpan={10} className="px-3 py-6 text-center text-[11px] text-muted">{search ? `No results for "${search}"` : "No wines yet"}</td></tr>
             )}
           </tbody>
         </table>
