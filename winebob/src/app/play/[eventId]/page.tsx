@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useState, useEffect, useCallback, useRef } from "react";
-import { getEventById, submitGuess, sendResultsViaWhatsApp } from "@/lib/actions";
+import { getEventById, submitGuess, savePhoneAndSendResults } from "@/lib/actions";
 import { decodeHtmlEntities } from "@/lib/importers/normalize";
 import {
   Wine,
@@ -1138,22 +1138,28 @@ function CompletedView({
   guestId: string;
   onShare: () => void;
 }) {
-  const [whatsappStatus, setWhatsappStatus] = useState<
-    "idle" | "sending" | "sent" | "error"
-  >("idle");
+  const [whatsappStep, setWhatsappStep] = useState<
+    "prompt" | "input" | "sending" | "sent" | "error"
+  >("prompt");
+  const [whatsappPhone, setWhatsappPhone] = useState("");
   const [whatsappError, setWhatsappError] = useState("");
 
-  const handleWhatsApp = async () => {
-    setWhatsappStatus("sending");
+  const handleWhatsAppSend = async () => {
+    const cleaned = whatsappPhone.replace(/[\s\-()]/g, "");
+    if (!cleaned.startsWith("+") || cleaned.length < 8) {
+      setWhatsappError("Enter your number with country code, e.g. +33612345678");
+      return;
+    }
+    setWhatsappStep("sending");
     setWhatsappError("");
     try {
-      await sendResultsViaWhatsApp(event.id, guestId);
-      setWhatsappStatus("sent");
+      await savePhoneAndSendResults(event.id, guestId, cleaned);
+      setWhatsappStep("sent");
     } catch (err) {
       setWhatsappError(
         err instanceof Error ? err.message : "Failed to send"
       );
-      setWhatsappStatus("error");
+      setWhatsappStep("error");
     }
   };
   const scoresByGuest = new Map<string, number>();
@@ -1266,26 +1272,57 @@ function CompletedView({
             Share Results
           </button>
 
-          {/* WhatsApp button — only if guest opted in */}
-          {whatsappStatus === "sent" ? (
-            <div className="w-full text-center py-3 text-green-700 font-medium text-sm flex items-center justify-center gap-2">
+          {/* WhatsApp — collect phone on results screen, then send */}
+          {whatsappStep === "sent" ? (
+            <div className="w-full text-center py-3 text-green-700 font-medium text-sm flex items-center justify-center gap-2 animate-fade-in-up">
               <Check className="h-4 w-4" />
               Results sent to your WhatsApp!
             </div>
+          ) : whatsappStep === "input" || whatsappStep === "sending" || whatsappStep === "error" ? (
+            <div className="rounded-[16px] bg-card-bg border border-green-200 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-4 space-y-3 animate-fade-in-up">
+              <p className="text-[13px] font-semibold text-foreground">
+                Enter your number to get results on WhatsApp
+              </p>
+              <input
+                type="tel"
+                value={whatsappPhone}
+                onChange={(e) => setWhatsappPhone(e.target.value)}
+                placeholder="+33 6 12 34 56 78"
+                autoComplete="tel"
+                className="input-field w-full touch-target"
+                autoFocus
+              />
+              <p className="text-[11px] text-muted">
+                International format with country code. Used only to send your results.
+              </p>
+              {whatsappError && (
+                <p className="text-red-600 text-sm">{whatsappError}</p>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setWhatsappStep("prompt"); setWhatsappError(""); }}
+                  className="btn-secondary flex-1 touch-target text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleWhatsAppSend}
+                  disabled={whatsappStep === "sending" || !whatsappPhone.trim()}
+                  className="flex-1 touch-target text-sm font-semibold rounded-[12px] bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2 py-3"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  {whatsappStep === "sending" ? "Sending..." : "Send"}
+                </button>
+              </div>
+            </div>
           ) : (
             <button
-              onClick={handleWhatsApp}
-              disabled={whatsappStatus === "sending"}
-              className="btn-secondary w-full touch-target gap-2 border-2 border-green-600 text-green-700 font-semibold disabled:opacity-50"
+              onClick={() => setWhatsappStep("input")}
+              className="btn-secondary w-full touch-target gap-2 border-2 border-green-600 text-green-700 font-semibold"
             >
               <MessageCircle className="h-5 w-5" />
-              {whatsappStatus === "sending"
-                ? "Sending..."
-                : "Send to WhatsApp"}
+              Get Results on WhatsApp
             </button>
-          )}
-          {whatsappError && (
-            <p className="text-red-600 text-sm text-center">{whatsappError}</p>
           )}
 
           <a
