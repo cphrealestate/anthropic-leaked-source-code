@@ -117,12 +117,21 @@ export default function HomePage() {
           <h2 className="text-[28px] font-bold text-white tracking-tight font-serif leading-tight mb-2">
             Explore the<br />world of wine
           </h2>
-          <p className="text-[14px] text-white/45 mb-8 max-w-[260px] mx-auto leading-relaxed">
+          <p className="text-[14px] text-white/45 mb-6 max-w-[260px] mx-auto leading-relaxed">
             An interactive map of producers, regions, and bookable experiences.
           </p>
 
+          {/* CTA — before feature list */}
+          <Link
+            href="/explore"
+            className="inline-flex items-center justify-center gap-2 w-full max-w-[260px] h-12 rounded-[10px] bg-white text-cherry font-bold text-[14px] hover:bg-white/90 transition-colors mb-8"
+          >
+            <Sparkles className="h-4 w-4" />
+            Explore the Map
+          </Link>
+
           {/* Feature list */}
-          <div className="space-y-2.5 mb-8 text-left max-w-[260px] mx-auto">
+          <div className="space-y-2.5 mb-6 text-left max-w-[260px] mx-auto">
             <div className="flex items-center gap-3">
               <div className="h-8 w-8 rounded-[8px] bg-white/10 flex items-center justify-center flex-shrink-0">
                 <MapPin className="h-4 w-4 text-white/60" />
@@ -149,15 +158,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* CTA */}
-          <Link
-            href="/explore"
-            className="inline-flex items-center justify-center gap-2 w-full max-w-[260px] h-12 rounded-[10px] bg-white text-cherry font-bold text-[14px] hover:bg-white/90 transition-colors"
-          >
-            <Sparkles className="h-4 w-4" />
-            Explore the Map
-          </Link>
-          <p className="text-[11px] text-white/30 mt-3">
+          <p className="text-[11px] text-white/30">
             Free to browse — no account needed
           </p>
         </div>
