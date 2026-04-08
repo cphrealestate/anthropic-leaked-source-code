@@ -483,9 +483,10 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
     });
 
     popup.current = new mapboxgl.Popup({
-      closeButton: false,
+      closeButton: true,
       closeOnClick: true,
-      offset: 8,
+      offset: 12,
+      maxWidth: "320px",
       className: "wb-popup",
     });
 
@@ -588,7 +589,31 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
         })),
       };
 
-      map.current.addSource("wineries", { type: "geojson", data: wineryGeoJSON });
+      map.current.addSource("wineries", { type: "geojson", data: mockGeoJSON });
+
+      // Fetch real wineries from the database and merge with mock data
+      fetch("/api/wineries")
+        .then((r) => r.json())
+        .then((apiData: GeoJSON.FeatureCollection) => {
+          if (!map.current || !apiData.features?.length) return;
+          const src = map.current.getSource("wineries") as mapboxgl.GeoJSONSource | undefined;
+          if (!src) return;
+          // API features already have grapeVarieties/wineStyles as arrays — stringify for consistency
+          const apiFeatures = apiData.features.map((f, i) => {
+            const p = (f.properties ?? {}) as Record<string, any>;
+            if (Array.isArray(p.grapeVarieties)) p.grapeVarieties = JSON.stringify(p.grapeVarieties);
+            if (Array.isArray(p.wineStyles)) p.wineStyles = JSON.stringify(p.wineStyles);
+            return { ...f, id: 10000 + i, properties: p };
+          });
+          // Build a set of API slugs to remove duplicates from mock data
+          const apiSlugs = new Set(apiFeatures.map((f) => (f.properties as any)?.slug));
+          const dedupedMock = mockGeoJSON.features.filter((f) => !apiSlugs.has((f.properties as any)?.slug));
+          src.setData({
+            type: "FeatureCollection",
+            features: [...dedupedMock, ...apiFeatures],
+          });
+        })
+        .catch(() => { /* API unavailable — keep mock data */ });
 
       // Featured wineries — gold, large and prominent (hero markers)
       map.current.addLayer({
@@ -647,16 +672,15 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
         },
       });
 
-      // Winery click — rich producer card
+      // Winery click — compact wine-label card
       for (const layerId of ["wineries-featured", "wineries-regular"]) {
         map.current.on("mouseenter", layerId, () => { if (map.current) map.current.getCanvas().style.cursor = "pointer"; });
-        map.current.on("mouseleave", layerId, () => { if (map.current) map.current.getCanvas().style.cursor = ""; popup.current?.remove(); });
+        map.current.on("mouseleave", layerId, () => { if (map.current) map.current.getCanvas().style.cursor = ""; });
         map.current.on("click", layerId, (e) => {
           if (!map.current || !e.features?.length) return;
           const p = e.features[0].properties as Record<string, any>;
           const isFeatured = p.featured === true || p.featured === "true";
 
-          // Parse JSON-encoded arrays
           let grapes: string[] = [];
           let styles: string[] = [];
           try { grapes = JSON.parse(p.grapeVarieties || "[]"); } catch {}
@@ -667,37 +691,44 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
             sparkling: "#B8A840", orange: "#C87840", fortified: "#8B4513",
           };
 
-          const grapePills = grapes.map((g: string) =>
-            `<span style="display:inline-block;padding:2px 8px;border-radius:6px;background:#F5F0E8;color:#5A4A30;font-size:10px;font-weight:600">${g}</span>`
-          ).join(" ");
-
+          // Style dots inline
           const styleDots = styles.map((s: string) =>
-            `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;color:#6B5A40"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${styleColorMap[s] || '#8C7E6E'}"></span>${s}</span>`
-          ).join(" ");
+            `<span style="width:8px;height:8px;border-radius:50%;background:${styleColorMap[s] || '#8C7E6E'};display:inline-block" title="${s}"></span>`
+          ).join("");
 
-          const bottles = p.annualBottles ? `${(p.annualBottles / 1000).toFixed(0)}k bottles/yr` : "";
+          // Grape pills inline (max 3)
+          const grapePills = grapes.slice(0, 3).map((g: string) =>
+            `<span style="padding:1px 6px;border-radius:4px;background:#F5F0E8;color:#5A4A30;font-size:9px;font-weight:600;white-space:nowrap">${g}</span>`
+          ).join("");
+
+          const bottles = p.annualBottles ? `${(p.annualBottles / 1000).toFixed(0)}k btl/yr` : "";
           const vineyard = p.vineyardSize && p.vineyardSize !== "N/A" && p.vineyardSize !== "Multiple" ? p.vineyardSize : "";
-          const statsLine = [vineyard, bottles].filter(Boolean).join(" · ");
+          const meta = [p.founded ? `Est. ${p.founded}` : "", vineyard, bottles].filter(Boolean).join(" · ");
+
+          // Truncate description to ~80 chars
+          const desc = p.description ? (p.description.length > 90 ? p.description.slice(0, 87) + "..." : p.description) : "";
 
           const searchName = encodeURIComponent(p.name);
+          const accentColor = isFeatured ? "#C8A255" : "#74070E";
 
           popup.current
             ?.setLngLat(e.lngLat)
             .setHTML(`
-              <div style="font-family:system-ui,sans-serif;max-width:300px;min-width:240px">
-                <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">
-                  <span style="font-size:18px;flex-shrink:0;margin-top:2px">🏰</span>
-                  <div style="flex:1;min-width:0">
-                    <p style="font-size:16px;font-weight:800;color:#1A1412;margin:0;font-family:Georgia,serif;line-height:1.2">${p.name}</p>
-                    <p style="font-size:11px;color:#8C7E6E;margin:3px 0 0">${p.region}, ${p.country}${p.founded ? ` · Est. ${p.founded}` : ""}${p.owner ? ` · ${p.owner}` : ""}</p>
+              <div style="font-family:system-ui,-apple-system,sans-serif;width:260px;display:flex;gap:0;overflow:hidden">
+                <div style="width:4px;flex-shrink:0;background:${accentColor};border-radius:2px 0 0 2px"></div>
+                <div style="flex:1;padding:2px 0 0 12px;min-width:0">
+                  <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+                    <p style="font-size:15px;font-weight:800;color:#1A1412;margin:0;font-family:Georgia,serif;line-height:1.2;flex:1;min-width:0">${p.name}</p>
+                    ${isFeatured ? `<span style="font-size:12px;flex-shrink:0" title="Featured">★</span>` : ""}
+                    <div style="display:flex;gap:3px;flex-shrink:0">${styleDots}</div>
+                  </div>
+                  <p style="font-size:10px;color:#8C7E6E;margin:0 0 6px;line-height:1.3">${meta}</p>
+                  ${desc ? `<p style="font-size:11px;color:#5A4A30;margin:0 0 8px;line-height:1.4">${desc}</p>` : ""}
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+                    <div style="display:flex;gap:3px;flex-wrap:wrap;flex:1;min-width:0">${grapePills}</div>
+                    <a href="/producers/${p.slug || ''}" style="flex-shrink:0;font-size:10px;font-weight:700;color:${accentColor};text-decoration:none;padding:4px 10px;border-radius:6px;background:${accentColor}12;white-space:nowrap">View wines →</a>
                   </div>
                 </div>
-                ${p.description ? `<p style="font-size:12px;color:#5A4A30;margin:0 0 8px;line-height:1.5">${p.description}</p>` : ""}
-                ${isFeatured ? `<p style="font-size:10px;font-weight:700;color:#C8A255;margin:0 0 8px;letter-spacing:0.03em">★ Featured Winery</p>` : ""}
-                ${grapes.length > 0 ? `<div style="margin-bottom:8px"><p style="font-size:9px;font-weight:700;color:#8C7E6E;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 4px">Grape Varieties</p><div style="display:flex;flex-wrap:wrap;gap:4px">${grapePills}</div></div>` : ""}
-                ${styles.length > 0 ? `<div style="margin-bottom:8px"><p style="font-size:9px;font-weight:700;color:#8C7E6E;text-transform:uppercase;letter-spacing:0.08em;margin:0 0 4px">Wine Styles</p><div style="display:flex;flex-wrap:wrap;gap:8px">${styleDots}</div></div>` : ""}
-                ${statsLine ? `<p style="font-size:10px;color:#8C7E6E;margin:0 0 8px;padding-top:6px;border-top:1px solid #F0E8D8">${statsLine}</p>` : ""}
-                <a href="/wines?search=${searchName}" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:#74070E;text-decoration:none;padding:6px 12px;border-radius:8px;background:rgba(116,7,14,0.08);margin-top:2px">View wines →</a>
               </div>
             `)
             .addTo(map.current!);
@@ -837,10 +868,18 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
         .wb-popup .mapboxgl-popup-content {
           background: #FFFFFF;
           border-radius: 12px;
-          padding: 10px 14px;
+          padding: 14px 16px;
           box-shadow: 0 4px 20px rgba(0,0,0,0.12);
           border: 1px solid rgba(0,0,0,0.06);
         }
+        .wb-popup .mapboxgl-popup-close-button {
+          font-size: 18px;
+          color: #8C7E6E;
+          padding: 4px 8px;
+          right: 4px;
+          top: 4px;
+        }
+        .wb-popup .mapboxgl-popup-close-button:hover { color: #1A1412; }
         .wb-popup .mapboxgl-popup-tip { border-top-color: #FFFFFF; }
         .mapboxgl-ctrl { display: none !important; }
       `}</style>
