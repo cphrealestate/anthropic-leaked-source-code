@@ -262,6 +262,18 @@ async function main() {
   const wResult = await insertWines(allWines);
   console.log(`  Done: ${wResult.created} created, ${wResult.skipped} failed\n`);
 
+  // Link wines to wineries by matching producer name → winery name
+  console.log("Linking wines to wineries...");
+  const linkResult = await sql`
+    UPDATE "Wine" w
+    SET "wineryId" = wy.id
+    FROM "Winery" wy
+    WHERE w.producer = wy.name
+      AND w.country = wy.country
+      AND w."wineryId" IS NULL
+  `;
+  console.log(`  Done: linked ${linkResult?.length ?? "?"} wines to wineries.\n`);
+
   // Update producer wine counts
   console.log("Updating producer wine counts...");
   await sql`
