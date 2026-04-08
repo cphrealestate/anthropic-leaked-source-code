@@ -4,7 +4,7 @@ import { useEffect, useRef, useCallback } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { wineRegions } from "@/data/wineRegions";
-import { mockWineries } from "@/data/mockWineries";
+import { mockWineries, type MockWinery } from "@/data/mockWineries";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
 
@@ -194,6 +194,8 @@ type WineRegionMapProps = {
   onTourStop?: (stop: TourStop | null) => void;
   /** Expose the internal Mapbox map instance to parent */
   mapRef?: React.RefObject<mapboxgl.Map | null>;
+  /** Winery data for map markers — falls back to mockWineries if not provided */
+  wineries?: MockWinery[];
 };
 
 const STYLE_STANDARD = "mapbox://styles/mapbox/standard";
@@ -218,7 +220,7 @@ export const REGION_CITIES: Record<string, [number, number]> = {
   "Marlborough": [173.95, -41.51], "Stellenbosch": [18.86, -33.93],
 };
 
-export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", className = "", exploreRegion, flyToCoords, tourRegion, onTourEnd, satellite = false, onTourStop, mapRef }: WineRegionMapProps) {
+export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", className = "", exploreRegion, flyToCoords, tourRegion, onTourEnd, satellite = false, onTourStop, mapRef, wineries: wineriesProp }: WineRegionMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const popup = useRef<mapboxgl.Popup | null>(null);
@@ -568,10 +570,11 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
         if (props) onRegionClickRef.current?.(props.name, props.country);
       });
 
-      // ── Winery markers (from mock data) ──
+      // ── Winery markers (from DB or mock fallback) ──
+      const wineryData = wineriesProp ?? mockWineries;
       const wineryGeoJSON: GeoJSON.FeatureCollection = {
         type: "FeatureCollection",
-        features: mockWineries.map((w, i) => ({
+        features: wineryData.map((w, i) => ({
           type: "Feature" as const,
           id: i,
           properties: {
