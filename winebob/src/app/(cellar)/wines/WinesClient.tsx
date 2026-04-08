@@ -207,7 +207,7 @@ export function WinesClient({
         <div className="flex-1 min-w-0">
           <p className="text-[14px] font-semibold text-foreground truncate">{wine.name}</p>
           <p className="text-[11px] text-muted mt-0.5 truncate">
-            {wine.producer} · {wine.region}, {wine.country}{wine.vintage ? ` · ${wine.vintage}` : ""}
+            {[wine.producer, [wine.region, wine.country].filter(Boolean).join(", ")].filter(Boolean).join(" · ")}{wine.vintage ? ` · ${wine.vintage}` : ""}
           </p>
         </div>
         {wine.priceRange && (
