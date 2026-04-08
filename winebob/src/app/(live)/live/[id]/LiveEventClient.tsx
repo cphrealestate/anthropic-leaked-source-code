@@ -222,11 +222,11 @@ export function LiveEventClient({ event: initialEvent }: { event: EventData }) {
             {/* Sommelier */}
             <div className="flex items-center justify-center gap-2.5 mb-5">
               <div
-                className="h-12 w-12 rounded-full flex items-center justify-center text-[16px] font-bold ring-2"
+                className="h-12 w-12 rounded-full flex items-center justify-center text-[16px] font-bold"
                 style={{
                   background: "rgba(220, 40, 50, 0.15)",
                   color: "#EF4444",
-                  ringColor: "rgba(255,255,255,0.1)",
+                  boxShadow: "0 0 0 2px rgba(255,255,255,0.1)",
                 }}
               >
                 {sommelier.displayName.charAt(0)}
@@ -475,11 +475,11 @@ export function LiveEventClient({ event: initialEvent }: { event: EventData }) {
           {/* Sommelier info */}
           <div className="flex items-center gap-2.5 mb-3">
             <div
-              className="h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-bold ring-2"
+              className="h-8 w-8 rounded-full flex items-center justify-center text-[11px] font-bold"
               style={{
                 background: "rgba(220, 40, 50, 0.15)",
                 color: "#EF4444",
-                ringColor: "rgba(255,255,255,0.06)",
+                boxShadow: "0 0 0 2px rgba(255,255,255,0.06)",
               }}
             >
               {sommelier.displayName.charAt(0)}

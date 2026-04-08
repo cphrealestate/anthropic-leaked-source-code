@@ -111,7 +111,7 @@ export default async function SommeliersPage() {
                   {/* Avatar */}
                   <div className="relative flex-shrink-0">
                     {som.avatar ? (
-                      <img src={som.avatar} alt="" className="h-14 w-14 rounded-2xl object-cover ring-2" style={{ ringColor: "rgba(255,255,255,0.08)" }} />
+                      <img src={som.avatar} alt="" className="h-14 w-14 rounded-2xl object-cover" style={{ boxShadow: "0 0 0 2px rgba(255,255,255,0.08)" }} />
                     ) : (
                       <div
                         className="h-14 w-14 rounded-2xl flex items-center justify-center text-xl font-bold"
