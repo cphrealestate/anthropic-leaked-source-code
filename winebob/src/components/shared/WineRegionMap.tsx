@@ -4,6 +4,7 @@ import { useEffect, useRef, useCallback } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { wineRegions } from "@/data/wineRegions";
+import { mockWineries } from "@/data/mockWineries";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN ?? "";
 
@@ -527,6 +528,100 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
         const props = e.features[0].properties;
         if (props) onRegionClickRef.current?.(props.name, props.country);
       });
+
+      // ── Winery markers (from mock data) ──
+      const wineryGeoJSON: GeoJSON.FeatureCollection = {
+        type: "FeatureCollection",
+        features: mockWineries.map((w, i) => ({
+          type: "Feature" as const,
+          id: i,
+          properties: { name: w.name, slug: w.slug, description: w.description, region: w.region, country: w.country, featured: w.featured, founded: w.founded },
+          geometry: { type: "Point" as const, coordinates: [w.lng, w.lat] },
+        })),
+      };
+
+      map.current.addSource("wineries", { type: "geojson", data: wineryGeoJSON });
+
+      // Featured wineries — gold, larger
+      map.current.addLayer({
+        id: "wineries-featured",
+        type: "circle",
+        source: "wineries",
+        filter: ["==", ["get", "featured"], true],
+        minzoom: 5,
+        paint: {
+          "circle-color": "#C8A255",
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 4, 8, 7, 12, 10],
+          "circle-opacity": ["interpolate", ["linear"], ["zoom"], 5, 0.6, 8, 0.9],
+          "circle-stroke-color": "#FFFFFF",
+          "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 5, 1, 12, 2],
+          "circle-stroke-opacity": 0.8,
+        },
+      });
+
+      // Regular wineries — cherry, smaller
+      map.current.addLayer({
+        id: "wineries-regular",
+        type: "circle",
+        source: "wineries",
+        filter: ["==", ["get", "featured"], false],
+        minzoom: 7,
+        paint: {
+          "circle-color": "#74070E",
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 7, 3, 12, 6],
+          "circle-opacity": ["interpolate", ["linear"], ["zoom"], 7, 0.4, 10, 0.7],
+          "circle-stroke-color": "#FFFFFF",
+          "circle-stroke-width": 1,
+          "circle-stroke-opacity": 0.5,
+        },
+      });
+
+      // Winery labels
+      map.current.addLayer({
+        id: "wineries-label",
+        type: "symbol",
+        source: "wineries",
+        minzoom: 8,
+        layout: {
+          "text-field": ["get", "name"],
+          "text-size": ["interpolate", ["linear"], ["zoom"], 8, 9, 12, 12],
+          "text-font": ["DIN Pro Medium", "Arial Unicode MS Regular"],
+          "text-offset": [0, 1.5],
+          "text-anchor": "top",
+          "text-allow-overlap": false,
+        },
+        paint: {
+          "text-color": ["case", ["==", ["get", "featured"], true], "#8B6A20", "#5A3020"],
+          "text-opacity": ["interpolate", ["linear"], ["zoom"], 8, 0.5, 10, 0.8],
+          "text-halo-color": "#F0E4CC",
+          "text-halo-width": 1.5,
+        },
+      });
+
+      // Winery click
+      for (const layerId of ["wineries-featured", "wineries-regular"]) {
+        map.current.on("mouseenter", layerId, () => { if (map.current) map.current.getCanvas().style.cursor = "pointer"; });
+        map.current.on("mouseleave", layerId, () => { if (map.current) map.current.getCanvas().style.cursor = ""; popup.current?.remove(); });
+        map.current.on("click", layerId, (e) => {
+          if (!map.current || !e.features?.length) return;
+          const p = e.features[0].properties as Record<string, any>;
+          const isFeatured = p.featured === true || p.featured === "true";
+          popup.current
+            ?.setLngLat(e.lngLat)
+            .setHTML(`
+              <div style="font-family:system-ui,sans-serif;max-width:220px">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+                  <span style="font-size:14px">🏰</span>
+                  <p style="font-size:14px;font-weight:700;color:#1A1412;margin:0">${p.name}</p>
+                </div>
+                <p style="font-size:10px;color:#8C7E6E;margin:0 0 4px">${p.region}, ${p.country}${p.founded ? ` · Est. ${p.founded}` : ""}</p>
+                ${p.description ? `<p style="font-size:11px;color:#6B5A40;margin:0;line-height:1.4">${p.description}</p>` : ""}
+                ${isFeatured ? `<p style="font-size:10px;font-weight:600;color:#C8A255;margin:4px 0 0">★ Featured Winery</p>` : ""}
+              </div>
+            `)
+            .addTo(map.current!);
+        });
+      }
 
       // ── POI interactions ──
       const poiLayers = ["poi-food", "poi-hotel", "poi-shops"];
