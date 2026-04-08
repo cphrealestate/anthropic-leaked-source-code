@@ -19,7 +19,7 @@ export default function HomePage() {
     <div className="min-h-dvh flex flex-col md:flex-row">
 
       {/* ══════ LEFT — Join / Host (butter) ══════ */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-14 bg-[#FAF8F5] relative overflow-hidden">
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-14 relative overflow-hidden" style={{ background: "#F2D98B" }}>
         {/* Subtle decorative grape */}
         <div className="absolute top-12 right-10 text-[100px] opacity-[0.03] pointer-events-none select-none">🍇</div>
 
@@ -50,7 +50,7 @@ export default function HomePage() {
                 onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                 placeholder="WINE42"
                 maxLength={8}
-                className="flex-1 h-[50px] rounded-[10px] bg-white border border-[#1A1412]/[0.08] text-center text-[18px] font-mono font-bold tracking-[0.2em] text-[#1A1412] placeholder:text-[#8C7E6E]/25 placeholder:font-normal placeholder:text-[14px] placeholder:tracking-normal focus:outline-none focus:border-cherry/30 focus:ring-2 focus:ring-cherry/10 transition-all"
+                className="flex-1 h-[50px] rounded-[10px] bg-white/80 border border-[#1A1412]/[0.08] text-center text-[18px] font-mono font-bold tracking-[0.2em] text-[#1A1412] placeholder:text-[#8C7E6E]/30 placeholder:font-normal placeholder:text-[14px] placeholder:tracking-normal focus:outline-none focus:bg-white focus:border-cherry/30 focus:ring-2 focus:ring-cherry/10 transition-all"
               />
               <button
                 type="submit"
@@ -64,15 +64,15 @@ export default function HomePage() {
 
           {/* Divider */}
           <div className="flex items-center gap-3 my-5">
-            <div className="flex-1 h-px bg-[#1A1412]/[0.06]" />
-            <span className="text-[10px] font-semibold text-[#8C7E6E]/60 uppercase tracking-wider">or</span>
-            <div className="flex-1 h-px bg-[#1A1412]/[0.06]" />
+            <div className="flex-1 h-px bg-[#1A1412]/10" />
+            <span className="text-[10px] font-semibold text-[#8C7E6E]/70 uppercase tracking-wider">or</span>
+            <div className="flex-1 h-px bg-[#1A1412]/10" />
           </div>
 
           {/* Host CTA */}
           <Link
             href="/arena"
-            className="group w-full h-12 rounded-[10px] bg-white border border-[#1A1412]/[0.06] flex items-center justify-center gap-2.5 hover:border-cherry/20 transition-all"
+            className="group w-full h-12 rounded-[10px] bg-white/70 border border-[#1A1412]/[0.06] flex items-center justify-center gap-2.5 hover:bg-white hover:border-cherry/20 transition-all"
           >
             <Trophy className="h-4 w-4 text-cherry" />
             <span className="font-bold text-[14px] text-[#1A1412]">Host a Blind Tasting</span>
