@@ -3,6 +3,7 @@ import { AuthProvider } from "@/lib/AuthProvider";
 import { UniversePortal } from "@/components/shared/UniversePortal";
 import { SearchProvider } from "@/components/shared/SearchContext";
 import { SmartSearchOverlay } from "@/components/shared/SmartSearchOverlay";
+import { BottomTabBar } from "@/components/shared/BottomTabBar";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -38,6 +39,7 @@ export default function RootLayout({
           <SearchProvider>
             {children}
             <SmartSearchOverlay />
+            <BottomTabBar />
           </SearchProvider>
           <UniversePortal />
         </AuthProvider>
