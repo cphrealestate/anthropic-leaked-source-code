@@ -477,59 +477,57 @@ function CreateEventInner() {
         <h1 className="text-[28px] font-bold font-serif text-foreground tracking-tight mb-1">
           Configure
         </h1>
-        <p className="text-muted text-[15px] mb-7">
+        <p className="text-muted text-[15px] mb-8">
           Set up the details for your tasting.
         </p>
 
-        {/* Title */}
-        <label className="block mb-6">
-          <span className="text-[11px] font-bold text-foreground uppercase tracking-wide">
-            Event Title
-          </span>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. Friday Night Flight"
-            className="input-field touch-target mt-2 block w-full"
-          />
-        </label>
+        {/* ── Event details card ── */}
+        <div className="bg-white rounded-[14px] border border-card-border/60 p-6 mb-6">
+          <h2 className="text-[11px] font-bold text-muted uppercase tracking-widest mb-5">Event Details</h2>
 
-        {/* Description */}
-        <label className="block mb-6">
-          <span className="text-[11px] font-bold text-foreground uppercase tracking-wide">
-            Description{" "}
-            <span className="font-normal normal-case text-muted tracking-normal">(optional)</span>
-          </span>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="A few words about this tasting..."
-            rows={3}
-            className="input-field mt-2 block w-full resize-none"
-          />
-        </label>
+          <label className="block mb-5">
+            <span className="text-[12px] font-semibold text-foreground">Title *</span>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Friday Night Flight"
+              className="input-field touch-target mt-1.5 block w-full"
+            />
+          </label>
 
-        {/* Difficulty — 2x2 grid with 16px radius */}
-        <div className="mb-6">
-          <span className="text-[13px] font-bold text-foreground uppercase tracking-wide block mb-3">
-            Difficulty
-          </span>
-          <div className="grid grid-cols-2 gap-2.5">
+          <label className="block">
+            <span className="text-[12px] font-semibold text-foreground">
+              Description <span className="font-normal text-muted">(optional)</span>
+            </span>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="A few words about this tasting..."
+              rows={2}
+              className="input-field mt-1.5 block w-full resize-none"
+            />
+          </label>
+        </div>
+
+        {/* ── Difficulty card ── */}
+        <div className="bg-white rounded-[14px] border border-card-border/60 p-6 mb-6">
+          <h2 className="text-[11px] font-bold text-muted uppercase tracking-widest mb-4">Difficulty</h2>
+          <div className="grid grid-cols-4 gap-2">
             {DIFFICULTIES.map((d) => {
               const isActive = difficulty === d.value;
               return (
                 <button
                   key={d.value}
                   onClick={() => setDifficulty(d.value)}
-                  className={`touch-target rounded-[16px] p-3.5 text-left transition-all ${
+                  className={`touch-target rounded-[10px] py-3 px-2 text-center transition-all ${
                     isActive
-                      ? `${d.color} ring-2 ring-cherry/30 shadow-sm`
-                      : "bg-card-bg border border-card-border"
+                      ? "bg-cherry text-white shadow-sm"
+                      : "bg-butter/80 text-foreground/70 hover:bg-butter"
                   }`}
                 >
-                  <span className="text-xl">{d.emoji}</span>
-                  <p className={`mt-1.5 font-bold text-[14px] ${isActive ? d.textColor : "text-foreground"}`}>
+                  <span className="text-lg block">{d.emoji}</span>
+                  <p className={`mt-1 font-semibold text-[11px] ${isActive ? "text-white" : "text-foreground/70"}`}>
                     {d.label}
                   </p>
                 </button>
@@ -538,15 +536,12 @@ function CreateEventInner() {
           </div>
         </div>
 
-        {/* Guess Fields — 2-column grid */}
-        <div className="mb-6">
-          <span className="text-[13px] font-bold text-foreground uppercase tracking-wide block mb-1">
-            Guess Fields
-          </span>
-          <p className="text-[12px] text-muted mb-3">
-            What will your guests try to identify?
-          </p>
-          <div className="grid grid-cols-2 gap-2.5">
+        {/* ── Guess Fields card ── */}
+        <div className="bg-white rounded-[14px] border border-card-border/60 p-6 mb-6">
+          <h2 className="text-[11px] font-bold text-muted uppercase tracking-widest mb-1">Guess Fields</h2>
+          <p className="text-[12px] text-muted mb-4">What will your guests try to identify?</p>
+
+          <div className="grid grid-cols-2 gap-2">
             {ALL_GUESS_FIELDS.map((field) => {
               const active = guessFields.includes(field.key);
               const Icon = field.icon;
@@ -554,44 +549,38 @@ function CreateEventInner() {
                 <button
                   key={field.key}
                   onClick={() => toggleGuessField(field.key)}
-                  className={`touch-target rounded-[16px] p-3.5 flex items-center gap-3 transition-all ${
+                  className={`touch-target rounded-[10px] px-3.5 py-3 flex items-center gap-3 transition-all border ${
                     active
-                      ? `${field.color} ring-2 ring-cherry/20 shadow-sm`
-                      : "bg-card-bg border border-card-border"
+                      ? "bg-cherry/[0.06] border-cherry/25 text-foreground"
+                      : "bg-white border-card-border/60 text-muted hover:border-card-border"
                   }`}
                 >
-                  <div className={`h-9 w-9 rounded-[12px] flex items-center justify-center flex-shrink-0 ${
-                    active ? "bg-white/50" : "bg-card-border/30"
+                  <Icon className={`h-4 w-4 flex-shrink-0 ${active ? "text-cherry" : "text-muted/50"}`} />
+                  <span className={`font-medium text-[13px] flex-1 text-left ${active ? "text-foreground" : "text-muted"}`}>
+                    {field.label}
+                  </span>
+                  <div className={`h-5 w-5 rounded-[5px] border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                    active ? "bg-cherry border-cherry" : "border-card-border/80 bg-white"
                   }`}>
-                    <Icon className={`h-4 w-4 ${active ? field.iconColor : "text-muted"}`} />
+                    {active && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
                   </div>
-                  <div className="flex-1 text-left">
-                    <p className={`font-semibold text-[13px] ${active ? "text-foreground" : "text-muted"}`}>
-                      {field.label}
-                    </p>
-                  </div>
-                  {active && (
-                    <div className="h-5 w-5 rounded-full bg-cherry flex items-center justify-center flex-shrink-0">
-                      <Check className="h-3 w-3 text-white" strokeWidth={3} />
-                    </div>
-                  )}
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Timer */}
-        <div className="bg-card-bg border border-card-border rounded-[16px] shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] p-4">
+        {/* ── Timer card ── */}
+        <div className="bg-white rounded-[14px] border border-card-border/60 p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-[12px] widget-sky flex items-center justify-center">
-                <Clock className="h-4.5 w-4.5 text-blue-600" />
+              <div className="h-9 w-9 rounded-[8px] bg-blue-50 flex items-center justify-center flex-shrink-0">
+                <Clock className="h-4 w-4 text-blue-600" />
               </div>
               <div>
-                <span className="text-[14px] font-bold text-foreground">Timer per wine</span>
+                <span className="text-[13px] font-semibold text-foreground">Timer per wine</span>
                 {timerEnabled && (
-                  <p className="text-[12px] text-muted mt-0.5 nums">
+                  <p className="text-[11px] text-muted mt-0.5 nums">
                     {Math.floor(timePerWine / 60)}:{String(timePerWine % 60).padStart(2, "0")} per wine
                   </p>
                 )}
@@ -605,7 +594,7 @@ function CreateEventInner() {
             </button>
           </div>
           {timerEnabled && (
-            <div className="mt-4 pt-3 border-t border-card-border/40">
+            <div className="mt-4 pt-4 border-t border-card-border/40">
               <input
                 type="range"
                 min={30}
@@ -615,7 +604,7 @@ function CreateEventInner() {
                 onChange={(e) => setTimePerWine(Number(e.target.value))}
                 className="w-full accent-cherry h-1.5"
               />
-              <div className="flex justify-between mt-1">
+              <div className="flex justify-between mt-1.5">
                 <span className="text-[10px] text-muted">0:30</span>
                 <span className="text-[10px] text-muted">10:00</span>
               </div>
