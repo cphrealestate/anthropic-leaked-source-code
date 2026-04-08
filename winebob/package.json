@@ -12,7 +12,9 @@
     "db:push": "prisma db push",
     "db:seed": "node prisma/seed.mjs && node prisma/seedGrapes.mjs && node prisma/seedAppellations.mjs",
     "db:seed:wines": "node prisma/seeds/seed-all.mjs",
-    "db:cleanup": "node prisma/seeds/cleanup.mjs"
+    "db:cleanup": "node prisma/seeds/cleanup.mjs",
+    "scrape": "npx tsx scripts/scrape-wines.ts",
+    "scrape:import": "node scripts/import-scraped.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.82.0",
@@ -46,6 +48,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "cheerio": "^1.2.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
     "tailwindcss": "^4",
