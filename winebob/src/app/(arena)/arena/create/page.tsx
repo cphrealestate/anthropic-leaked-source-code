@@ -887,39 +887,39 @@ function CreateEventInner() {
 
   function renderStep4() {
     const selectedDifficulty = DIFFICULTIES.find((d) => d.value === difficulty);
+    const diffBadge = DIFFICULTY_BADGE[difficulty] || DIFFICULTY_BADGE.intermediate;
 
     return (
       <div className="animate-fade-in-up">
         <h1 className="text-[28px] font-bold font-serif text-foreground tracking-tight mb-1">
           Review & Create
         </h1>
-        <p className="text-muted text-[15px] mb-7">
+        <p className="text-muted text-[15px] mb-8">
           Everything look good?
         </p>
 
-        {/* Event summary card */}
-        <div className="bg-card-bg border border-card-border rounded-[16px] shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] p-5 mb-4">
-          <h2 className="text-xl font-bold font-serif text-foreground tracking-tight">
-            {title || "Blind Tasting"}
-          </h2>
-          {description && (
-            <p className="text-[13px] text-muted mt-1.5 leading-relaxed">{description}</p>
-          )}
+        {/* ── Event summary card ── */}
+        <div className="bg-white rounded-[14px] border border-card-border/60 overflow-hidden mb-5">
+          {/* Title section */}
+          <div className="px-6 pt-6 pb-4">
+            <h2 className="text-[20px] font-bold font-serif text-foreground tracking-tight">
+              {title || "Blind Tasting"}
+            </h2>
+            {description && (
+              <p className="text-[13px] text-muted mt-1.5 leading-relaxed">{description}</p>
+            )}
+          </div>
 
-          <div className="mt-5 space-y-4">
-            {/* Difficulty */}
-            <div className="flex items-center justify-between">
+          {/* Settings rows */}
+          <div className="border-t border-card-border/40 divide-y divide-card-border/30">
+            <div className="flex items-center justify-between px-6 py-3.5">
               <span className="text-[13px] text-muted">Difficulty</span>
-              <div className="flex items-center gap-1.5">
-                <span>{selectedDifficulty?.emoji}</span>
-                <span className={`text-[13px] font-semibold ${selectedDifficulty?.textColor ?? "text-foreground"}`}>
-                  {selectedDifficulty?.label ?? difficulty}
-                </span>
-              </div>
+              <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${diffBadge.bg} ${diffBadge.text}`}>
+                {selectedDifficulty?.emoji} {selectedDifficulty?.label ?? difficulty}
+              </span>
             </div>
 
-            {/* Timer */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between px-6 py-3.5">
               <span className="text-[13px] text-muted">Timer</span>
               <span className="text-[13px] font-semibold text-foreground nums">
                 {timerEnabled
@@ -928,19 +928,16 @@ function CreateEventInner() {
               </span>
             </div>
 
-            {/* Guess Fields */}
-            <div>
+            <div className="px-6 py-3.5">
               <span className="text-[13px] text-muted block mb-2">Guess Fields</span>
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-1.5 flex-wrap">
                 {guessFields.map((f) => {
                   const field = ALL_GUESS_FIELDS.find((gf) => gf.key === f);
-                  const Icon = field?.icon ?? Wine;
                   return (
                     <span
                       key={f}
-                      className={`inline-flex items-center gap-1.5 rounded-[8px] ${field?.color ?? "bg-widget-wine"} px-3 py-1.5 text-[12px] font-semibold ${field?.iconColor ?? "text-cherry"}`}
+                      className="inline-flex items-center gap-1 rounded-full bg-cherry/[0.07] px-2.5 py-1 text-[11px] font-semibold text-cherry"
                     >
-                      <Icon className="h-3 w-3" />
                       {field?.label ?? f}
                     </span>
                   );
@@ -950,32 +947,32 @@ function CreateEventInner() {
           </div>
         </div>
 
-        {/* Wines card */}
-        <div className="bg-card-bg border border-card-border rounded-[16px] shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] p-5 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[13px] font-bold text-foreground uppercase tracking-wide">
-              Wines
+        {/* ── Wines card ── */}
+        <div className="bg-white rounded-[14px] border border-card-border/60 overflow-hidden mb-8">
+          <div className="flex items-center justify-between px-6 py-3.5 border-b border-card-border/40">
+            <h3 className="text-[11px] font-bold text-muted uppercase tracking-widest">
+              Wine Flight
             </h3>
-            <span className="text-[13px] font-bold text-cherry nums">{selectedWines.length}</span>
+            <span className="text-[12px] font-bold text-cherry nums">{selectedWines.length} wines</span>
           </div>
-          <div className="space-y-3">
+          <div className="divide-y divide-card-border/30">
             {selectedWines.map((wine, idx) => (
-              <div key={wine.id} className="flex items-center gap-3">
-                <span className="flex h-8 w-8 items-center justify-center rounded-[12px] widget-wine text-[11px] font-bold text-cherry flex-shrink-0 nums">
+              <div key={wine.id} className="flex items-center gap-3 px-6 py-3.5">
+                <span className="flex h-7 w-7 items-center justify-center rounded-[6px] bg-cherry/[0.07] text-[11px] font-bold text-cherry flex-shrink-0 nums">
                   {idx + 1}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-semibold font-serif text-foreground line-clamp-1">
+                  <p className="text-[14px] font-medium text-foreground line-clamp-1">
                     {wineName(wine.name)}
                   </p>
-                  <p className="text-[11px] text-muted">{wineName(wine.producer)}</p>
+                  <p className="text-[11px] text-muted mt-0.5">{wineName(wine.producer)}{wine.region ? ` \u00B7 ${wine.region}` : ""}</p>
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Create button */}
+        {/* ── Create button ── */}
         <button
           onClick={handleCreate}
           disabled={isPending}
