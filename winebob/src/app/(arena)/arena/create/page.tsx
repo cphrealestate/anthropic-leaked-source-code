@@ -119,6 +119,9 @@ function CreateEventInner() {
   const [browseLoaded, setBrowseLoaded] = useState(false);
   const [typeFilter, setTypeFilter] = useState<string | null>(null);
 
+  // Error state
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   // Step 4 state
   const [isPending, startTransition] = useTransition();
 
@@ -135,6 +138,9 @@ function CreateEventInner() {
           applyTemplate(tmpl);
         }
       }
+    }).catch(() => {
+      setTemplatesLoading(false);
+      setLoadError("Could not load templates. Please try again.");
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -143,9 +149,13 @@ function CreateEventInner() {
 
   useEffect(() => {
     if (step === 3 && !browseLoaded) {
+      setLoadError(null);
       getBrowseWines().then((data) => {
         setBrowseWines(data as WineResult[]);
         setBrowseLoaded(true);
+      }).catch(() => {
+        setBrowseLoaded(true);
+        setLoadError("Could not load wines. Please try again.");
       });
     }
   }, [step, browseLoaded]);
@@ -634,7 +644,17 @@ function CreateEventInner() {
         )}
 
         {/* Wine list */}
-        {!browseLoaded && searchQuery.trim().length < 2 ? (
+        {loadError && searchQuery.trim().length < 2 ? (
+          <div className="bg-card-bg border border-card-border rounded-[16px] shadow-[0_2px_8px_rgba(0,0,0,0.06),0_0_1px_rgba(0,0,0,0.04)] flex flex-col items-center justify-center py-10 px-6 text-center mb-4">
+            <p className="text-[14px] text-muted mb-3">{loadError}</p>
+            <button
+              onClick={() => { setBrowseLoaded(false); setLoadError(null); }}
+              className="btn-secondary text-[13px] px-4 py-2"
+            >
+              Try again
+            </button>
+          </div>
+        ) : !browseLoaded && searchQuery.trim().length < 2 ? (
           <div className="flex justify-center py-12">
             <div className="h-6 w-6 rounded-full border-2 border-cherry border-t-transparent animate-spin" />
           </div>
