@@ -766,6 +766,30 @@ export async function getHostEvents() {
 
 // ============ WHATSAPP: SEND RESULTS ============
 
+// Guest provides phone on the results screen and we send immediately
+export async function savePhoneAndSendResults(
+  eventId: string,
+  guestId: string,
+  phone: string
+) {
+  if (!isValidE164(phone)) {
+    throw new Error("Invalid phone number. Use international format, e.g. +33612345678");
+  }
+
+  const guest = await prisma.guestParticipant.findFirst({
+    where: { id: guestId, eventId },
+  });
+  if (!guest) throw new Error("Guest not found");
+
+  // Save phone + consent in one go, then send
+  await prisma.guestParticipant.update({
+    where: { id: guestId },
+    data: { phone, whatsappConsent: true },
+  });
+
+  return sendResultsViaWhatsApp(eventId, guestId);
+}
+
 export async function sendResultsViaWhatsApp(eventId: string, guestId: string) {
   // Fetch guest with their consent status
   const guest = await prisma.guestParticipant.findFirst({
