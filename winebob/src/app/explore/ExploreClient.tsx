@@ -30,9 +30,10 @@ type RegionData = Awaited<ReturnType<typeof getRegionDetail>>;
 
 type Props = {
   wineries?: MockWinery[];
+  regionCounts?: Record<string, number>;
 };
 
-export default function ExploreClient({ wineries }: Props) {
+export default function ExploreClient({ wineries, regionCounts }: Props) {
   const { openSearch } = useSearch();
   const { layers, toggle: rawToggle, isActive } = useMapLayers();
   const fullLayers: MapLayer[] = layers.map((l) => ({ ...l, icon: LAYER_ICONS[l.id] ?? null }));
@@ -124,6 +125,7 @@ export default function ExploreClient({ wineries }: Props) {
       <div className="absolute inset-0">
         <WineRegionMap
           onRegionClick={handleRegionClick}
+          regionCounts={regionCounts}
           exploreRegion={selectedRegion}
           flyToCoords={flyToCoords}
           tourRegion={tourRegion}

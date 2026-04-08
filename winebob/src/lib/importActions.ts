@@ -75,6 +75,80 @@ function extractGrapes(r: WineSearcherRecord): string[] {
   return raw.split(/[,/]/).map((g) => g.trim()).filter(Boolean);
 }
 
+// Map Wine-Searcher appellations/sub-regions to our 28 map region names
+const REGION_MAP: Record<string, string> = {
+  // France — Bordeaux appellations
+  "margaux": "Bordeaux", "pauillac": "Bordeaux", "saint-emilion": "Bordeaux", "st-emilion": "Bordeaux",
+  "pomerol": "Bordeaux", "sauternes": "Bordeaux", "pessac-leognan": "Bordeaux", "medoc": "Bordeaux",
+  "haut-medoc": "Bordeaux", "saint-julien": "Bordeaux", "graves": "Bordeaux", "listrac": "Bordeaux",
+  "moulis": "Bordeaux", "barsac": "Bordeaux", "entre-deux-mers": "Bordeaux", "fronsac": "Bordeaux",
+  // France — Burgundy
+  "gevrey-chambertin": "Burgundy", "vosne-romanee": "Burgundy", "nuits-saint-georges": "Burgundy",
+  "meursault": "Burgundy", "puligny-montrachet": "Burgundy", "chassagne-montrachet": "Burgundy",
+  "chablis": "Burgundy", "beaune": "Burgundy", "pommard": "Burgundy", "volnay": "Burgundy",
+  "corton": "Burgundy", "cote de nuits": "Burgundy", "cote de beaune": "Burgundy",
+  "bourgogne": "Burgundy", "macon": "Burgundy", "pouilly-fuisse": "Burgundy",
+  // France — Champagne
+  "champagne": "Champagne",
+  // France — Rhone
+  "cote-rotie": "Rhone Valley", "hermitage": "Rhone Valley", "chateauneuf-du-pape": "Rhone Valley",
+  "crozes-hermitage": "Rhone Valley", "gigondas": "Rhone Valley", "vacqueyras": "Rhone Valley",
+  "condrieu": "Rhone Valley", "saint-joseph": "Rhone Valley", "cornas": "Rhone Valley",
+  "cotes du rhone": "Rhone Valley", "rhone": "Rhone Valley",
+  // France — Loire
+  "sancerre": "Loire Valley", "vouvray": "Loire Valley", "muscadet": "Loire Valley",
+  "chinon": "Loire Valley", "bourgueil": "Loire Valley", "savennieres": "Loire Valley",
+  "pouilly-fume": "Loire Valley", "anjou": "Loire Valley", "loire": "Loire Valley",
+  // France — Alsace / Provence
+  "alsace": "Alsace", "provence": "Provence", "bandol": "Provence",
+  // Italy
+  "barolo": "Piedmont", "barbaresco": "Piedmont", "langhe": "Piedmont", "asti": "Piedmont",
+  "chianti": "Tuscany", "brunello di montalcino": "Tuscany", "bolgheri": "Tuscany",
+  "montalcino": "Tuscany", "montepulciano": "Tuscany", "toscana": "Tuscany",
+  "valpolicella": "Veneto", "amarone": "Veneto", "soave": "Veneto", "prosecco": "Veneto",
+  "etna": "Sicily", "sicilia": "Sicily", "nero d'avola": "Sicily",
+  // Spain
+  "rioja": "Rioja", "ribera del duero": "Ribera del Duero", "priorat": "Priorat",
+  // Portugal
+  "douro": "Douro Valley", "porto": "Douro Valley", "port": "Douro Valley", "alentejo": "Alentejo",
+  // Germany
+  "mosel": "Mosel", "rheingau": "Rheingau", "pfalz": "Rheingau",
+  // USA
+  "napa valley": "Napa Valley", "napa": "Napa Valley", "oakville": "Napa Valley",
+  "rutherford": "Napa Valley", "st. helena": "Napa Valley", "stags leap": "Napa Valley",
+  "sonoma": "Sonoma", "russian river": "Sonoma", "alexander valley": "Sonoma",
+  "willamette valley": "Willamette Valley", "willamette": "Willamette Valley",
+  // South America
+  "mendoza": "Mendoza", "uco valley": "Mendoza",
+  "maipo valley": "Maipo Valley", "maipo": "Maipo Valley",
+  "colchagua": "Colchagua Valley", "colchagua valley": "Colchagua Valley",
+  // Australia
+  "barossa valley": "Barossa Valley", "barossa": "Barossa Valley", "eden valley": "Barossa Valley",
+  "margaret river": "Margaret River",
+  // NZ
+  "marlborough": "Marlborough", "central otago": "Marlborough",
+  // South Africa
+  "stellenbosch": "Stellenbosch", "franschhoek": "Stellenbosch", "paarl": "Stellenbosch",
+};
+
+function normalizeRegion(appellation: string, region: string, country: string): string {
+  // Try appellation first (most specific)
+  const appLower = appellation.toLowerCase().trim();
+  if (REGION_MAP[appLower]) return REGION_MAP[appLower];
+
+  // Try region
+  const regLower = region.toLowerCase().trim();
+  if (REGION_MAP[regLower]) return REGION_MAP[regLower];
+
+  // Try partial matches
+  for (const [key, value] of Object.entries(REGION_MAP)) {
+    if (appLower.includes(key) || regLower.includes(key)) return value;
+  }
+
+  // Fallback: return the original region or appellation
+  return region || appellation || country;
+}
+
 function extractType(r: WineSearcherRecord): string {
   const raw = (r.type || r.style || "").toLowerCase();
   if (raw.includes("red")) return "red";
@@ -188,8 +262,10 @@ export async function importFromApifyDataset(datasetIdOrUrl: string) {
         const { priceRange, priceNumeric } = extractPrice(record);
         const score = extractScore(record);
         const country = (record.country || "").trim();
-        const region = (record.region || record.appellation || "").trim();
+        const rawRegion = (record.region || record.appellation || "").trim();
         const appellation = (record.appellation || "").trim();
+        // Normalize to one of our 28 map region names
+        const region = normalizeRegion(appellation, rawRegion, country);
         const lwin = (record.lwin || "").trim() || null;
         const abv = typeof record.abv === "number" ? record.abv : (typeof record.abv === "string" ? parseFloat(record.abv) : null);
 
