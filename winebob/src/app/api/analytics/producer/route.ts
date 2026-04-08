@@ -80,7 +80,7 @@ async function getOverview(producer: string, params: URLSearchParams) {
     }),
     // Latest overall funnel metrics
     prisma.funnelMetric.findFirst({
-      where: { segment: null },
+      where: { segment: "" },
       orderBy: { weekStart: "desc" },
     }),
     // Total wines by this producer
