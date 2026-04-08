@@ -506,20 +506,23 @@ export function FlavorGenomeLayer({ active, mapRef }: Props) {
       if (newSize === currentSize) return;
       currentSize = newSize;
 
-      // Rebuild all marker elements
-      markersRef.current.forEach((marker, idx) => {
-        const profile = REGION_FLAVORS[idx];
-        if (!profile) return;
+      // Remove all markers and recreate at new size
+      for (const m of markersRef.current) m.remove();
+      markersRef.current = [];
+
+      REGION_FLAVORS.forEach((profile) => {
+        const coords = REGION_CITIES[profile.region];
+        if (!coords) return;
         const newEl = buildMarkerEl(profile, newSize);
         newEl.addEventListener("click", (e) => {
           e.stopPropagation();
           handleMarkerClick(profile);
-          const coords = REGION_CITIES[profile.region];
-          if (coords) map.flyTo({ center: coords, zoom: 6, duration: 1200 });
+          map.flyTo({ center: coords, zoom: 6, duration: 1200 });
         });
-        (marker as unknown as { _element: HTMLElement })._element.replaceWith(newEl);
-        // Update internal reference
-        (marker as unknown as { _element: HTMLElement })._element = newEl;
+        const marker = new mapboxgl.Marker({ element: newEl, anchor: "center" })
+          .setLngLat(coords)
+          .addTo(map);
+        markersRef.current.push(marker);
       });
     };
     map.on("zoom", onZoom);
