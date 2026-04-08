@@ -41,15 +41,20 @@ export default function LiveLayout({
         <header
           className="safe-top sticky top-0 z-40"
           style={{
-            borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
-            background: "rgba(15, 13, 11, 0.88)",
-            backdropFilter: "blur(20px) saturate(180%)",
-            WebkitBackdropFilter: "blur(20px) saturate(180%)",
+            borderBottom: "1px solid rgba(255, 255, 255, 0.04)",
+            background: "rgba(15, 13, 11, 0.92)",
+            backdropFilter: "blur(24px) saturate(180%)",
+            WebkitBackdropFilter: "blur(24px) saturate(180%)",
           }}
         >
           <div className="container-app flex items-center justify-between" style={{ height: 56 }}>
             <div className="flex items-center gap-2.5">
-              <Radio size={18} style={{ color: "#EDE4D4", opacity: 0.6 }} />
+              <div
+                className="h-7 w-7 rounded-lg flex items-center justify-center"
+                style={{ background: "rgba(220, 40, 50, 0.1)" }}
+              >
+                <Radio size={14} style={{ color: "#EF4444", opacity: 0.8 }} />
+              </div>
               <span
                 style={{
                   fontFamily: "var(--font-serif, Georgia, serif)",
@@ -90,8 +95,8 @@ export default function LiveLayout({
           className="pointer-events-none"
           style={{
             position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)",
-            width: 400, height: 200,
-            background: "radial-gradient(ellipse, rgba(220, 40, 50, 0.04) 0%, transparent 70%)",
+            width: 500, height: 250,
+            background: "radial-gradient(ellipse, rgba(220, 40, 50, 0.03) 0%, transparent 70%)",
             zIndex: 0,
           }}
         />
