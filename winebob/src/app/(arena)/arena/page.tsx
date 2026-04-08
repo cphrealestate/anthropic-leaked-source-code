@@ -7,20 +7,27 @@ export const dynamic = "force-dynamic";
 export default async function ArenaPage() {
   const session = await requireAuth();
 
-  const [events, templates] = await Promise.all([
-    prisma.blindTastingEvent.findMany({
-      where: { hostId: session.user.id },
-      orderBy: { createdAt: "desc" },
-      include: {
-        wines: true,
-        guests: { select: { id: true, displayName: true } },
-      },
-    }),
-    prisma.eventTemplate.findMany({
-      where: { isPublic: true },
-      orderBy: [{ featured: "desc" }, { usageCount: "desc" }],
-    }),
-  ]);
+  let events: Awaited<ReturnType<typeof prisma.blindTastingEvent.findMany>> = [];
+  let templates: Awaited<ReturnType<typeof prisma.eventTemplate.findMany>> = [];
+
+  try {
+    [events, templates] = await Promise.all([
+      prisma.blindTastingEvent.findMany({
+        where: { hostId: session.user.id },
+        orderBy: { createdAt: "desc" },
+        include: {
+          wines: true,
+          guests: { select: { id: true, displayName: true } },
+        },
+      }),
+      prisma.eventTemplate.findMany({
+        where: { isPublic: true },
+        orderBy: [{ featured: "desc" }, { usageCount: "desc" }],
+      }),
+    ]);
+  } catch (e) {
+    console.error("Failed to load arena data:", e);
+  }
 
   return (
     <ArenaClient
