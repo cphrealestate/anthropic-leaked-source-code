@@ -24,6 +24,7 @@ const LAYER_ICONS: Record<string, React.ReactNode> = {
 };
 
 export default function ExplorePage() {
+  const { openSearch } = useSearch();
   const { layers, toggle: rawToggle, isActive } = useMapLayers();
   const fullLayers: MapLayer[] = layers.map((l) => ({ ...l, icon: LAYER_ICONS[l.id] ?? null }));
 
