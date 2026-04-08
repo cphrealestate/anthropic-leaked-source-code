@@ -1,13 +1,17 @@
-import { getMapWineries } from "@/lib/actions";
+import { getMapWineries, getWineRegionCounts } from "@/lib/actions";
 import ExploreClient from "./ExploreClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function ExplorePage() {
   let wineries: Awaited<ReturnType<typeof getMapWineries>> = [];
+  let regionCounts: Record<string, number> = {};
 
   try {
-    wineries = await getMapWineries();
+    [wineries, regionCounts] = await Promise.all([
+      getMapWineries(),
+      getWineRegionCounts(),
+    ]);
   } catch {
     // Database unavailable — client will fall back to mockWineries
   }
@@ -30,5 +34,10 @@ export default async function ExplorePage() {
     annualBottles: w.annualBottles ?? 0,
   }));
 
-  return <ExploreClient wineries={mapped.length > 0 ? mapped : undefined} />;
+  return (
+    <ExploreClient
+      wineries={mapped.length > 0 ? mapped : undefined}
+      regionCounts={regionCounts}
+    />
+  );
 }
