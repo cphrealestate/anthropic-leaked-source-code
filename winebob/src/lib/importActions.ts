@@ -5,74 +5,86 @@ import { requireAuth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 // ── Types for Wine-Searcher scraper output ──
+// Exact fields from mrbridge/wine-searcher-scraper-from-list actor:
+//   inputValue, wineName, appellation, score, style,
+//   cheapestPriceAmount, cheapestPriceCurrency, cheapestPriceMerchant,
+//   offersCount, wineryName, winePopularity, wineSearcherUrl
 
 type WineSearcherRecord = {
+  inputValue?: string;
   wineName?: string;
-  wine_name?: string;
+  appellation?: string;        // "Pomerol, France" or "Puligny-Montrachet Premier Cru, France"
+  score?: number | null;       // 94, 97
+  style?: string;              // "Red – Savory and Classic", "White – Buttery and Complex"
+  cheapestPriceAmount?: number | null;  // 2400 (full EUR, not cents)
+  cheapestPriceCurrency?: string;       // "EUR"
+  cheapestPriceMerchant?: string;
+  offersCount?: number;
+  wineryName?: string;         // "Petrus", "Domaine Leflaive"
+  winePopularity?: string | null; // "116th" or null
+  wineSearcherUrl?: string;
+  // Fallback fields for other scrapers / manual data
   name?: string;
-  vintage?: number | string | null;
   producer?: string;
-  winery?: string;
-  producerUrl?: string;
-  winery_url?: string;
+  vintage?: number | string | null;
   region?: string;
-  appellation?: string;
   country?: string;
   type?: string;
-  style?: string;
   grapes?: string | string[];
-  grape_variety?: string;
-  criticScore?: number | string;
-  critic_score?: number | string;
-  averageScore?: number | string;
-  reviewCount?: number | string;
-  price?: number | string;
-  lowestPrice?: number | string;
-  lowest_price?: string;
-  currency?: string;
-  priceNumeric?: number;
-  merchants?: number | string;
-  popularity?: number | string;
-  popularityRank?: number | string;
-  lwin?: string;
-  url?: string;
-  wine_searcher_url?: string;
-  imageUrl?: string;
-  image_url?: string;
   description?: string;
-  foodPairing?: string;
-  food_pairing?: string;
   tastingNotes?: string;
-  tasting_notes?: string;
+  foodPairing?: string;
   abv?: number | string;
+  lwin?: string;
   notFound?: boolean;
-  not_found?: boolean;
-  cachedAt?: string;
   [key: string]: unknown;
 };
 
 // ── Helpers ──
 
 function extractName(r: WineSearcherRecord): string {
-  return (r.wineName || r.wine_name || r.name || "").trim();
+  return (r.wineName || r.name || "").trim();
 }
 
 function extractProducer(r: WineSearcherRecord): string {
-  return (r.producer || r.winery || "").trim();
+  return (r.wineryName || r.producer || "").trim();
 }
 
 function extractVintage(r: WineSearcherRecord): number | null {
-  const v = r.vintage;
-  if (!v) return null;
-  const n = typeof v === "string" ? parseInt(v) : v;
-  return n >= 1900 && n <= 2030 ? n : null;
+  // Check explicit vintage field first
+  if (r.vintage) {
+    const n = typeof r.vintage === "string" ? parseInt(r.vintage) : r.vintage;
+    if (n >= 1900 && n <= 2030) return n;
+  }
+  // Parse from wineName: "2020 Domaine Leflaive Les Pucelles"
+  const name = r.wineName || r.name || "";
+  const match = name.match(/\b(19\d{2}|20[0-2]\d)\b/);
+  return match ? parseInt(match[1]) : null;
+}
+
+function extractAppellationAndCountry(r: WineSearcherRecord): { appellation: string; country: string; rawRegion: string } {
+  // Wine-Searcher format: "Pomerol, France" or "Puligny-Montrachet Premier Cru, France"
+  const raw = (r.appellation || "").trim();
+  const parts = raw.split(",").map((s) => s.trim());
+
+  if (parts.length >= 2) {
+    const country = parts[parts.length - 1];
+    const appellation = parts.slice(0, -1).join(", ");
+    return { appellation, country, rawRegion: appellation };
+  }
+
+  return {
+    appellation: raw || (r.region || ""),
+    country: (r.country || "").trim(),
+    rawRegion: raw || (r.region || ""),
+  };
 }
 
 function extractGrapes(r: WineSearcherRecord): string[] {
   if (Array.isArray(r.grapes)) return r.grapes.filter(Boolean);
-  const raw = r.grapes || r.grape_variety || "";
-  if (!raw) return [];
-  return raw.split(/[,/]/).map((g) => g.trim()).filter(Boolean);
+  const raw = r.grapes;
+  if (!raw || typeof raw !== "string") return [];
+  return raw.split(/[,/]/).map((g: string) => g.trim()).filter(Boolean);
 }
 
 // Map Wine-Searcher appellations/sub-regions to our 28 map region names
@@ -173,10 +185,11 @@ function jitter(coord: number, spread = 0.08): number {
 }
 
 function extractType(r: WineSearcherRecord): string {
-  const raw = (r.type || r.style || "").toLowerCase();
-  if (raw.includes("red")) return "red";
-  if (raw.includes("white")) return "white";
-  if (raw.includes("rosé") || raw.includes("rose")) return "rosé";
+  // Wine-Searcher style format: "Red – Savory and Classic", "White – Buttery and Complex"
+  const raw = (r.style || r.type || "").toLowerCase();
+  if (raw.startsWith("red")) return "red";
+  if (raw.startsWith("white")) return "white";
+  if (raw.includes("rosé") || raw.startsWith("rose")) return "rosé";
   if (raw.includes("sparkling") || raw.includes("champagne") || raw.includes("cava") || raw.includes("prosecco")) return "sparkling";
   if (raw.includes("dessert") || raw.includes("sweet") || raw.includes("sauternes") || raw.includes("tokaj")) return "dessert";
   if (raw.includes("fortified") || raw.includes("port") || raw.includes("sherry") || raw.includes("madeira")) return "fortified";
@@ -184,19 +197,21 @@ function extractType(r: WineSearcherRecord): string {
   return "red"; // default
 }
 
+function extractStyleDescription(r: WineSearcherRecord): string | null {
+  // Extract the descriptor part: "Red – Savory and Classic" → "Savory and Classic"
+  const raw = r.style || "";
+  const dashIdx = raw.indexOf("–");
+  if (dashIdx >= 0) return raw.slice(dashIdx + 1).trim();
+  return null;
+}
+
 function extractPrice(r: WineSearcherRecord): { priceRange: string; priceNumeric: number | null } {
-  let amount: number | null = null;
-  const raw = r.price || r.lowestPrice || r.lowest_price || r.priceNumeric;
-  if (typeof raw === "number") {
-    amount = raw;
-  } else if (typeof raw === "string") {
-    const match = raw.match(/[\d,.]+/);
-    if (match) amount = parseFloat(match[0].replace(",", ""));
-  }
+  // cheapestPriceAmount is full currency amount (e.g., 2400 = €2,400)
+  const amount = r.cheapestPriceAmount ?? null;
 
-  if (!amount) return { priceRange: "mid", priceNumeric: null };
+  if (!amount || amount <= 0) return { priceRange: "mid", priceNumeric: null };
 
-  // Map to winebob price ranges (approximate USD)
+  // Map to winebob price ranges (in EUR/USD equivalent)
   let priceRange = "mid";
   if (amount < 15) priceRange = "budget";
   else if (amount < 40) priceRange = "mid";
@@ -207,9 +222,9 @@ function extractPrice(r: WineSearcherRecord): { priceRange: string; priceNumeric
 }
 
 function extractScore(r: WineSearcherRecord): number | null {
-  const raw = r.criticScore || r.critic_score || r.averageScore;
-  if (!raw) return null;
-  const n = typeof raw === "string" ? parseFloat(raw) : raw;
+  const raw = r.score;
+  if (raw == null) return null;
+  const n = typeof raw === "number" ? raw : parseFloat(String(raw));
   return n >= 0 && n <= 100 ? n : null;
 }
 
@@ -282,11 +297,10 @@ export async function importFromApifyDataset(datasetIdOrUrl: string) {
         const vintage = extractVintage(record);
         const grapes = extractGrapes(record);
         const type = extractType(record);
+        const styleDesc = extractStyleDescription(record);
         const { priceRange, priceNumeric } = extractPrice(record);
         const score = extractScore(record);
-        const country = (record.country || "").trim();
-        const rawRegion = (record.region || record.appellation || "").trim();
-        const appellation = (record.appellation || "").trim();
+        const { appellation, country, rawRegion } = extractAppellationAndCountry(record);
         // Normalize to one of our 28 map region names
         const region = normalizeRegion(appellation, rawRegion, country);
         const lwin = (record.lwin || "").trim() || null;
@@ -376,22 +390,24 @@ export async function importFromApifyDataset(datasetIdOrUrl: string) {
           country: country || "Unknown",
           appellation: appellation || null,
           type,
-          description: record.description || null,
+          description: styleDesc ? `${styleDesc}. Imported from Wine-Searcher.` : (record.description || null),
           priceRange,
           abv: abv && abv > 0 && abv < 100 ? abv : null,
-          tastingNotes: record.tastingNotes || record.tasting_notes || null,
-          foodPairing: record.foodPairing || record.food_pairing || null,
+          tastingNotes: record.tastingNotes || null,
+          foodPairing: record.foodPairing || null,
           lwin,
           source: "wine-searcher" as const,
           confidence: score ? Math.min(score / 100, 1.0) : 0.7,
           isPublic: true,
           importBatchId: batch.id,
           externalIds: {
-            wineSearcherUrl: record.url || record.wine_searcher_url || null,
+            wineSearcherUrl: record.wineSearcherUrl || null,
             criticScore: score,
             priceNumeric,
-            popularity: record.popularity || record.popularityRank || null,
-            merchantCount: record.merchants || null,
+            priceCurrency: record.cheapestPriceCurrency || null,
+            cheapestMerchant: record.cheapestPriceMerchant || null,
+            popularity: record.winePopularity || null,
+            offersCount: record.offersCount || null,
           },
         };
 
