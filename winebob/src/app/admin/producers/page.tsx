@@ -59,7 +59,7 @@ export default async function ProducersPage() {
               <tr key={w.id} className="border-b border-card-border/10 hover:bg-blue-50/30 group">
                 <td className="px-2 py-[5px] text-center"><input type="checkbox" className="h-3 w-3 accent-cherry" /></td>
                 <td className="px-2 py-[5px]">
-                  <Link href={`/producers/${w.slug}`} className="font-semibold text-foreground hover:text-cherry truncate block max-w-[200px]">{w.name}</Link>
+                  <Link href={`/admin/producers/${w.id}/edit`} className="font-semibold text-foreground hover:text-cherry truncate block max-w-[200px]">{w.name}</Link>
                 </td>
                 <td className="px-2 py-[5px] text-muted truncate">{w.region}</td>
                 <td className="px-2 py-[5px] text-muted">{w.country}</td>
@@ -75,7 +75,7 @@ export default async function ProducersPage() {
                   </div>
                 </td>
                 <td className="px-2 py-[5px] text-right text-[9px] text-muted font-mono">{w.lat.toFixed(2)}, {w.lng.toFixed(2)}</td>
-                <td className="px-2 py-[5px] text-right opacity-0 group-hover:opacity-100"><span className="text-muted cursor-pointer hover:text-foreground">···</span></td>
+                <td className="px-2 py-[5px] text-right opacity-0 group-hover:opacity-100"><Link href={`/admin/producers/${w.id}/edit`} className="text-[9px] text-cherry hover:underline">Edit</Link></td>
               </tr>
             ))}
             {wineries.length === 0 && (

@@ -32,6 +32,23 @@ export async function getWinery(slug: string) {
   });
 }
 
+export async function getWineryById(id: string) {
+  return prisma.winery.findUnique({
+    where: { id },
+    include: {
+      wines: { orderBy: { name: "asc" }, take: 100 },
+      _count: { select: { wines: true } },
+    },
+  });
+}
+
+export async function getWineById(id: string) {
+  return prisma.wine.findUnique({
+    where: { id },
+    include: { winery: { select: { id: true, name: true, slug: true } } },
+  });
+}
+
 export async function createWinery(data: {
   name: string;
   slug: string;
