@@ -17,8 +17,9 @@ import { FlavorGenomeLayer } from "@/components/layers/FlavorGenomeLayer";
 import { LiveHeatmapLayer } from "@/components/layers/LiveHeatmapLayer";
 import DrawFlightLayer from "@/components/layers/DrawFlightLayer";
 import { WineryShowcaseLayer } from "@/components/layers/WineryShowcaseLayer";
+import { SHOWCASE_WINERIES } from "@/data/showcaseWineries";
 import { getRegionDetail } from "@/lib/actions";
-import { useState, useRef, useTransition } from "react";
+import { useState, useRef, useTransition, useCallback } from "react";
 import mapboxgl from "mapbox-gl";
 
 const LAYER_ICONS: Record<string, React.ReactNode> = {
@@ -69,6 +70,11 @@ export default function ExploreClient({ wineries, regionCounts }: Props) {
   const [showRegionPanel, setShowRegionPanel] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [vintagePick, setVintagePick] = useState<VintagePick | null>(null);
+  const [showcaseWineryId, setShowcaseWineryId] = useState<string | null>(null);
+
+  const handleShowcaseClick = useCallback((id: string) => {
+    setShowcaseWineryId(id);
+  }, []);
 
   function handleCityClick(city: { name: string; coords: [number, number] }) {
     setTourRegion(null);
@@ -143,6 +149,7 @@ export default function ExploreClient({ wineries, regionCounts }: Props) {
           height="100%"
           mapRef={mapRef}
           wineries={wineries}
+          onShowcaseClick={handleShowcaseClick}
         />
       </div>
 
@@ -168,7 +175,7 @@ export default function ExploreClient({ wineries, regionCounts }: Props) {
         active={isActive("draw-flight")}
         mapRef={mapRef}
       />
-      <WineryShowcaseLayer mapRef={mapRef} />
+      <WineryShowcaseLayer selectedId={showcaseWineryId} onClose={() => setShowcaseWineryId(null)} />
 
       {/* Top — branding + search + back */}
       <div className="absolute top-0 left-0 right-0 z-20 safe-top">

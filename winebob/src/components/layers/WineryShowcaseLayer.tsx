@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { ChevronLeft, ChevronRight, X, MapPin, Star, Wine, Grape } from "lucide-react";
-import mapboxgl from "mapbox-gl";
+import { ChevronLeft, ChevronRight, X, MapPin, Star, Wine } from "lucide-react";
 import {
   SHOWCASE_WINERIES,
   type ShowcaseWinery,
@@ -251,93 +250,17 @@ function WineCard({ wine }: { wine: ShowcaseWine }) {
 }
 
 // ── Main Layer Component ──
+// Layers are added by WineRegionMap. This component only renders the card UI.
 
-export function WineryShowcaseLayer({ mapRef }: Props) {
-  const [selected, setSelected] = useState<ShowcaseWinery | null>(null);
-  const [mapReady, setMapReady] = useState(false);
+type Props = {
+  selectedId: string | null;
+  onClose: () => void;
+};
 
-  const handleClose = useCallback(() => setSelected(null), []);
+export function WineryShowcaseLayer({ selectedId, onClose }: Props) {
+  const winery = selectedId ? SHOWCASE_WINERIES.find((w) => w.id === selectedId) ?? null : null;
 
-  // ── Poll for map readiness ──
-  useEffect(() => {
-    const map = mapRef.current;
-    if (map) {
-      setMapReady(true);
-      return;
-    }
-    const interval = setInterval(() => {
-      if (mapRef.current) {
-        setMapReady(true);
-        clearInterval(interval);
-      }
-    }, 200);
-    return () => clearInterval(interval);
-  }, [mapRef]);
+  if (!winery) return null;
 
-  // ── Handle clicks on showcase polygons ──
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !mapReady) return;
-
-    const onClick = (e: mapboxgl.MapMouseEvent) => {
-      // Query both the dedicated showcase layer AND fallback to checking the source directly
-      const features = map.queryRenderedFeatures(e.point, { layers: ["showcase-fill"] });
-      if (features.length > 0) {
-        const id = features[0].properties?.id;
-        const winery = SHOWCASE_WINERIES.find((w) => w.id === id);
-        if (winery) {
-          setSelected(winery);
-          map.flyTo({
-            center: winery.center,
-            zoom: Math.max(map.getZoom(), 15),
-            pitch: 60,
-            bearing: -20,
-            duration: 1500,
-          });
-        }
-      }
-    };
-
-    const onMouseEnter = () => { map.getCanvas().style.cursor = "pointer"; };
-    const onMouseLeave = () => { map.getCanvas().style.cursor = ""; };
-
-    // Wait for the layer to exist (added by WineRegionMap)
-    const tryAttach = () => {
-      if (map.getLayer("showcase-fill")) {
-        map.on("click", "showcase-fill", onClick);
-        map.on("mouseenter", "showcase-fill", onMouseEnter);
-        map.on("mouseleave", "showcase-fill", onMouseLeave);
-        return true;
-      }
-      return false;
-    };
-
-    if (!tryAttach()) {
-      // Retry until the layer is added by WineRegionMap
-      const interval = setInterval(() => {
-        if (tryAttach()) clearInterval(interval);
-      }, 500);
-      const cleanup = () => clearInterval(interval);
-      return () => {
-        cleanup();
-        try {
-          map.off("click", "showcase-fill", onClick);
-          map.off("mouseenter", "showcase-fill", onMouseEnter);
-          map.off("mouseleave", "showcase-fill", onMouseLeave);
-        } catch { /* layer might not exist */ }
-      };
-    }
-
-    return () => {
-      try {
-        map.off("click", "showcase-fill", onClick);
-        map.off("mouseenter", "showcase-fill", onMouseEnter);
-        map.off("mouseleave", "showcase-fill", onMouseLeave);
-      } catch { /* ignore */ }
-    };
-  }, [mapRef, mapReady]);
-
-  if (!selected) return null;
-
-  return <ShowcaseCard winery={selected} onClose={handleClose} />;
+  return <ShowcaseCard winery={winery} onClose={onClose} />;
 }
