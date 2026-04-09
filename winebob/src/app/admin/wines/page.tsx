@@ -70,7 +70,7 @@ export default async function WinesAdminPage({ searchParams }: { searchParams: P
                 <td className="px-2 py-[5px]">
                   <div className="flex items-center gap-1.5">
                     <span className="w-[2px] h-3.5 rounded-full flex-shrink-0" style={{ background: TC[w.type] || "#8C7E6E" }} />
-                    <span className="font-semibold text-foreground truncate max-w-[250px]">{w.name}</span>
+                    <Link href={`/admin/wines/${w.id}/edit`} className="font-semibold text-foreground hover:text-cherry truncate max-w-[250px]">{w.name}</Link>
                   </div>
                 </td>
                 <td className="px-2 py-[5px]">
@@ -82,7 +82,7 @@ export default async function WinesAdminPage({ searchParams }: { searchParams: P
                 <td className="px-2 py-[5px] text-muted truncate max-w-[100px]">{w.grapes.slice(0, 2).join(", ") || "—"}</td>
                 <td className="px-2 py-[5px] text-center font-semibold">{PL[w.priceRange ?? ""] || "—"}</td>
                 <td className="px-2 py-[5px] text-center"><span className="text-[8px] text-muted bg-muted/[0.08] px-1 py-0.5 rounded">{w.source}</span></td>
-                <td className="px-2 py-[5px] text-right opacity-0 group-hover:opacity-100"><span className="text-muted cursor-pointer hover:text-foreground">···</span></td>
+                <td className="px-2 py-[5px] text-right opacity-0 group-hover:opacity-100"><Link href={`/admin/wines/${w.id}/edit`} className="text-[9px] text-cherry hover:underline">Edit</Link></td>
               </tr>
             ))}
             {wines.length === 0 && (

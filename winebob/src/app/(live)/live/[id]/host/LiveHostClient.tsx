@@ -4,9 +4,8 @@ import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  ChevronLeft, Play, Eye, Flag, Radio, Users, Wine,
-  Check, Sparkles, Crown, Trophy, Copy, CheckCircle2,
-  BarChart3,
+  ChevronLeft, Play, Eye, Flag, Users, Wine,
+  Check, Sparkles, Trophy, Copy, CheckCircle2, BarChart3,
 } from "lucide-react";
 import {
   getLiveEventById, startLiveEvent, releaseHint,
@@ -24,86 +23,37 @@ export function LiveHostClient({ event: initialEvent }: { event: EventData }) {
   useEffect(() => {
     if (event.status === "completed") return;
     const id = setInterval(async () => {
-      const data = await getLiveEventById(event.id);
-      if (data) setEvent(data);
+      const d = await getLiveEventById(event.id); if (d) setEvent(d);
     }, 3000);
     return () => clearInterval(id);
   }, [event.id, event.status]);
 
-  function handleStart() {
-    startTransition(async () => {
-      await startLiveEvent(event.id);
-      router.refresh();
-      const data = await getLiveEventById(event.id);
-      if (data) setEvent(data);
-    });
-  }
+  const act = (fn: () => Promise<void>) => startTransition(async () => { await fn(); const d = await getLiveEventById(event.id); if (d) setEvent(d); });
 
-  function handleReleaseHint(hintId: string) {
-    startTransition(async () => {
-      await releaseHint(hintId);
-      const data = await getLiveEventById(event.id);
-      if (data) setEvent(data);
-    });
-  }
-
-  function handleRevealWine(position: number) {
-    startTransition(async () => {
-      await revealLiveWine(event.id, position);
-      const data = await getLiveEventById(event.id);
-      if (data) setEvent(data);
-    });
-  }
-
-  function handleComplete() {
-    startTransition(async () => {
-      await completeLiveEvent(event.id);
-      const data = await getLiveEventById(event.id);
-      if (data) setEvent(data);
-    });
-  }
-
-  function copyJoinCode() {
-    if (event.joinCode) {
-      navigator.clipboard.writeText(event.joinCode).catch(() => {});
-      setCopiedCode(true);
-      setTimeout(() => setCopiedCode(false), 2000);
-    }
-  }
-
-  const currentWineIdx = event.wines.findIndex((w) => !w.revealed);
-  const currentWine = currentWineIdx >= 0 ? event.wines[currentWineIdx] : null;
+  const currentWine = event.wines.find((w) => !w.revealed) ?? null;
   const allRevealed = event.wines.every((w) => w.revealed);
-
-  const currentGuessCount = currentWine
-    ? event.guesses.filter((g) => g.winePosition === currentWine.position).length
-    : 0;
-
-  const totalGuesses = event.guesses.length;
+  const currentGuessCount = currentWine ? event.guesses.filter((g) => g.winePosition === currentWine.position).length : 0;
 
   return (
     <div className="min-h-dvh safe-top safe-bottom bg-background">
       <div className="px-5 pt-5 pb-32">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <Link href="/live" className="inline-flex items-center gap-1 text-[13px] font-semibold text-muted touch-target">
-            <ChevronLeft className="h-4 w-4" /> Back
+        <div className="flex items-center justify-between mb-4">
+          <Link href="/live" className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted touch-target">
+            <ChevronLeft className="h-3.5 w-3.5" /> Back
           </Link>
           <div className="flex items-center gap-2">
             {event.status === "live" && (
-              <>
-                <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                <span className="text-[12px] font-bold text-red-500 uppercase">Live</span>
-              </>
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-500 uppercase">
+                <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" /> Live
+              </span>
             )}
-            <span className="text-[12px] font-semibold text-muted flex items-center gap-1">
-              <Users className="h-3.5 w-3.5" /> {event.participants.length}
-            </span>
+            <span className="text-[11px] font-semibold text-muted"><Users className="h-3 w-3 inline -mt-px" /> {event.participants.length}</span>
           </div>
         </div>
 
-        <h1 className="text-[22px] font-bold text-foreground tracking-tight mb-1">{event.title}</h1>
-        <p className="text-[13px] text-muted mb-6">Host Control Panel</p>
+        <h1 className="text-[16px] font-bold text-foreground tracking-tight">{event.title}</h1>
+        <p className="text-[11px] text-muted mb-4">Host Control Panel</p>
 
         {/* Join Code */}
         {event.joinCode && (
@@ -115,11 +65,6 @@ export function LiveHostClient({ event: initialEvent }: { event: EventData }) {
               <p className="label">Join Code</p>
               <p className="text-[18px] font-bold font-mono tracking-widest text-foreground mt-1">{event.joinCode}</p>
             </div>
-            {copiedCode ? (
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
-            ) : (
-              <Copy className="h-5 w-5 text-muted" />
-            )}
           </button>
         )}
 
@@ -155,32 +100,24 @@ export function LiveHostClient({ event: initialEvent }: { event: EventData }) {
 
         {/* Wine flight */}
         {event.status === "live" && (
-          <div className="space-y-4">
-            {/* Flight progress */}
-            <div className="flex items-center gap-1.5 mb-2">
+          <div className="space-y-2">
+            {/* Progress */}
+            <div className="flex gap-1 mb-1">
               {event.wines.map((w) => (
-                <div
-                  key={w.id}
-                  className="flex-1 h-1.5 rounded-full transition-all duration-500"
+                <div key={w.id} className="flex-1 h-1 rounded-full transition-all duration-500"
                   style={{
-                    background: w.revealed
-                      ? "var(--cherry)"
-                      : w.id === currentWine?.id
-                        ? "var(--cherry-light)"
-                        : "var(--card-border)",
-                    boxShadow: w.id === currentWine?.id ? "0 0 6px rgba(116, 7, 14, 0.3)" : "none",
-                    opacity: w.revealed ? 1 : w.id === currentWine?.id ? 0.7 : 0.3,
-                  }}
-                />
+                    background: w.revealed ? "var(--cherry)" : w.id === currentWine?.id ? "var(--cherry-light)" : "var(--card-border)",
+                    opacity: w.revealed ? 1 : w.id === currentWine?.id ? 0.6 : 0.2,
+                  }} />
               ))}
             </div>
 
             {event.wines.map((lw) => {
               const isCurrent = lw.id === currentWine?.id;
-              const unreveledHints = lw.hints.filter((h) => !h.revealed);
-              const revealedHints = lw.hints.filter((h) => h.revealed);
-              const nextHint = unreveledHints[0];
-              const guessCount = event.guesses.filter((g) => g.winePosition === lw.position).length;
+              const unrevealed = lw.hints.filter((h) => !h.revealed);
+              const revealed = lw.hints.filter((h) => h.revealed);
+              const next = unrevealed[0];
+              const gc = event.guesses.filter((g) => g.winePosition === lw.position).length;
 
               return (
                 <div
@@ -201,14 +138,12 @@ export function LiveHostClient({ event: initialEvent }: { event: EventData }) {
                         <p className="text-[11px] text-muted">{lw.wine?.producer}{lw.wine?.vintage ? ` \u00b7 ${lw.wine.vintage}` : ""}</p>
                       </div>
                     </div>
-                    {isCurrent && (
-                      <span className="text-[11px] font-bold text-cherry animate-pulse">Current</span>
-                    )}
-                    {lw.revealed && (
-                      <span className="text-[11px] font-semibold text-green-600 flex items-center gap-1">
-                        <Eye className="h-3 w-3" /> Revealed
-                      </span>
-                    )}
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[12px] font-bold text-foreground truncate block">{lw.wine?.name ?? "Wine"}</span>
+                      <span className="text-[10px] text-muted">{lw.wine?.producer}{lw.wine?.vintage ? ` \u00b7 ${lw.wine.vintage}` : ""}</span>
+                    </div>
+                    {isCurrent && <span className="text-[9px] font-bold text-cherry">Current</span>}
+                    {lw.revealed && <span className="text-[9px] font-semibold text-green-600"><Eye className="h-2.5 w-2.5 inline" /> Revealed</span>}
                   </div>
 
                   {isCurrent && (
@@ -236,35 +171,14 @@ export function LiveHostClient({ event: initialEvent }: { event: EventData }) {
                           </span>
                         </button>
                       )}
-
-                      {unreveledHints.length > 1 && (
-                        <p className="text-[11px] text-muted text-center">
-                          {unreveledHints.length - 1} more hint{unreveledHints.length > 2 ? "s" : ""} remaining
-                        </p>
-                      )}
-
-                      <div className="pt-2 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <BarChart3 className="h-3.5 w-3.5 text-muted" />
-                          <span className="text-[12px] text-muted font-semibold tabular-nums">{guessCount} guesses</span>
-                        </div>
-                        <button
-                          onClick={() => handleRevealWine(lw.position)}
-                          disabled={isPending}
-                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-cherry text-white text-[13px] font-semibold active:scale-95 transition-transform disabled:opacity-50 touch-target"
-                        >
-                          <Eye className="h-4 w-4" /> {isPending ? "Revealing..." : "Reveal Wine"}
+                      {unrevealed.length > 1 && <p className="text-[9px] text-muted text-center">{unrevealed.length - 1} more hint{unrevealed.length > 2 ? "s" : ""}</p>}
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-[10px] text-muted"><BarChart3 className="h-3 w-3 inline -mt-px" /> {gc} guesses</span>
+                        <button onClick={() => act(() => revealLiveWine(event.id, lw.position))} disabled={isPending}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-cherry text-white text-[11px] font-semibold active:scale-95 transition-transform disabled:opacity-50 touch-target">
+                          <Eye className="h-3 w-3" /> {isPending ? "..." : "Reveal"}
                         </button>
                       </div>
-                    </div>
-                  )}
-
-                  {lw.revealed && (
-                    <div className="flex items-center gap-3 mt-2 pt-2 border-t border-card-border/30">
-                      <span className="text-[11px] font-semibold text-muted">
-                        {event.guesses.filter((g) => g.winePosition === lw.position).length} guesses
-                      </span>
-                      <span className="text-[11px] font-semibold text-muted">{lw.hints.length} hints</span>
                     </div>
                   )}
                 </div>
@@ -272,8 +186,9 @@ export function LiveHostClient({ event: initialEvent }: { event: EventData }) {
             })}
 
             {allRevealed && (
-              <button onClick={handleComplete} disabled={isPending} className="btn-primary w-full touch-target mt-4">
-                <Flag className="h-5 w-5" /> {isPending ? "Finishing..." : "End Tasting"}
+              <button onClick={() => act(() => completeLiveEvent(event.id))} disabled={isPending}
+                className="btn-primary w-full py-3 text-[14px] mt-2">
+                <Flag className="h-4 w-4" /> {isPending ? "Finishing..." : "End Tasting"}
               </button>
             )}
           </div>

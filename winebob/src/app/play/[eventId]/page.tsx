@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useState, useEffect, useCallback, useRef } from "react";
-import { getEventById, submitGuess } from "@/lib/actions";
+import { getEventById, submitGuess, savePhoneAndSendResults } from "@/lib/actions";
 import { decodeHtmlEntities } from "@/lib/importers/normalize";
 import {
   Wine,
@@ -22,6 +22,7 @@ import {
   Tag,
   DollarSign,
   Search,
+  MessageCircle,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -255,13 +256,30 @@ export default function PlayPage({
   // ---- Share ----
   const handleShare = async () => {
     if (!event) return;
-    const text = `I just finished a blind tasting: "${event.title}" on WineBob!`;
+
+    // Compute score and rank for richer share text
+    const scoresByGuest = new Map<string, number>();
+    for (const guess of event.guesses) {
+      scoresByGuest.set(guess.guestId, (scoresByGuest.get(guess.guestId) ?? 0) + (guess.score ?? 0));
+    }
+    const ranked = event.guests
+      .map((g: GuestParticipant) => ({ id: g.id, totalScore: scoresByGuest.get(g.id) ?? 0 }))
+      .sort((a, b) => b.totalScore - a.totalScore);
+    const myRank = ranked.findIndex((g) => g.id === guestId) + 1;
+    const myScore = scoresByGuest.get(guestId) ?? 0;
+    const totalWines = event.wines?.length ?? 0;
+
+    const rankText = myRank > 0 ? ` I placed #${myRank} of ${ranked.length}!` : "";
+    const scoreText = myScore > 0 ? ` Score: ${myScore} pts across ${totalWines} wines.` : "";
+    const text = `I just finished "${event.title}" on WineBob \u2014 a blind tasting with ${totalWines} wines.${rankText}${scoreText}`;
+    const url = typeof window !== "undefined" ? window.location.href : "";
+
     if (navigator.share) {
       try {
-        await navigator.share({ title: "WineBob Tasting", text });
+        await navigator.share({ title: `WineBob: ${event.title}`, text, url });
       } catch { /* user cancelled */ }
     } else {
-      await navigator.clipboard.writeText(text);
+      await navigator.clipboard.writeText(`${text}\n${url}`);
     }
   };
 
@@ -1111,6 +1129,30 @@ function CompletedView({
   guestId: string;
   onShare: () => void;
 }) {
+  const [whatsappStep, setWhatsappStep] = useState<
+    "prompt" | "input" | "sending" | "sent" | "error"
+  >("prompt");
+  const [whatsappPhone, setWhatsappPhone] = useState("");
+  const [whatsappError, setWhatsappError] = useState("");
+
+  const handleWhatsAppSend = async () => {
+    const cleaned = whatsappPhone.replace(/[\s\-()]/g, "");
+    if (!cleaned.startsWith("+") || cleaned.length < 8) {
+      setWhatsappError("Enter your number with country code, e.g. +33612345678");
+      return;
+    }
+    setWhatsappStep("sending");
+    setWhatsappError("");
+    try {
+      await savePhoneAndSendResults(event.id, guestId, cleaned);
+      setWhatsappStep("sent");
+    } catch (err) {
+      setWhatsappError(
+        err instanceof Error ? err.message : "Failed to send"
+      );
+      setWhatsappStep("error");
+    }
+  };
   const scoresByGuest = new Map<string, number>();
   for (const guess of event.guesses) {
     scoresByGuest.set(
@@ -1220,6 +1262,60 @@ function CompletedView({
             <Share2 className="h-5 w-5" />
             Share Results
           </button>
+
+          {/* WhatsApp — collect phone on results screen, then send */}
+          {whatsappStep === "sent" ? (
+            <div className="w-full text-center py-3 text-green-700 font-medium text-sm flex items-center justify-center gap-2 animate-fade-in-up">
+              <Check className="h-4 w-4" />
+              Results sent to your WhatsApp!
+            </div>
+          ) : whatsappStep === "input" || whatsappStep === "sending" || whatsappStep === "error" ? (
+            <div className="rounded-[16px] bg-card-bg border border-green-200 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-4 space-y-3 animate-fade-in-up">
+              <p className="text-[13px] font-semibold text-foreground">
+                Enter your number to get results on WhatsApp
+              </p>
+              <input
+                type="tel"
+                value={whatsappPhone}
+                onChange={(e) => setWhatsappPhone(e.target.value)}
+                placeholder="+33 6 12 34 56 78"
+                autoComplete="tel"
+                className="input-field w-full touch-target"
+                autoFocus
+              />
+              <p className="text-[11px] text-muted">
+                International format with country code. Used only to send your results.
+              </p>
+              {whatsappError && (
+                <p className="text-red-600 text-sm">{whatsappError}</p>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setWhatsappStep("prompt"); setWhatsappError(""); }}
+                  className="btn-secondary flex-1 touch-target text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleWhatsAppSend}
+                  disabled={whatsappStep === "sending" || !whatsappPhone.trim()}
+                  className="flex-1 touch-target text-sm font-semibold rounded-[12px] bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2 py-3"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  {whatsappStep === "sending" ? "Sending..." : "Send"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setWhatsappStep("input")}
+              className="btn-secondary w-full touch-target gap-2 border-2 border-green-600 text-green-700 font-semibold"
+            >
+              <MessageCircle className="h-5 w-5" />
+              Get Results on WhatsApp
+            </button>
+          )}
+
           <a
             href="/login"
             className="btn-primary block text-center touch-target"

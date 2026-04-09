@@ -23,16 +23,10 @@ const CERT_OPTIONS = [
 ];
 
 const BENEFITS = [
-  { icon: Radio, title: "Go Live Anytime", desc: "Host blind tasting sessions with real-time audience interaction" },
-  { icon: Users, title: "Build Your Audience", desc: "Grow a following of wine enthusiasts who love your style" },
-  { icon: Trophy, title: "Gamified Engagement", desc: "Viewers compete with hints, scores, and leaderboards" },
-  { icon: TrendingUp, title: "Track Your Impact", desc: "See your stats grow — events hosted, viewers, and ratings" },
-];
-
-const STEPS = [
-  { num: 1, title: "Create Your Profile", desc: "Add your name, bio, and expertise areas" },
-  { num: 2, title: "Set Up a Tasting", desc: "Choose wines, prepare hints, and schedule your event" },
-  { num: 3, title: "Go Live", desc: "Host your session while viewers guess along in real time" },
+  { icon: Radio, title: "Go Live", desc: "Host blind tastings with real-time interaction" },
+  { icon: Users, title: "Build Audience", desc: "Grow your following of wine enthusiasts" },
+  { icon: Trophy, title: "Gamification", desc: "Viewers compete with hints and leaderboards" },
+  { icon: TrendingUp, title: "Track Impact", desc: "See your events, viewers, and ratings grow" },
 ];
 
 export default function BecomeSommelierPage() {
@@ -40,32 +34,24 @@ export default function BecomeSommelierPage() {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState("");
   const [step, setStep] = useState<"intro" | "form">("intro");
-
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [expertise, setExpertise] = useState<string[]>([]);
   const [certifications, setCertifications] = useState<string[]>([]);
 
-  function toggleExpertise(item: string) {
-    setExpertise((prev) => prev.includes(item) ? prev.filter((e) => e !== item) : [...prev, item]);
-  }
-
-  function toggleCert(item: string) {
-    setCertifications((prev) => prev.includes(item) ? prev.filter((c) => c !== item) : [...prev, item]);
+  function toggle(arr: string[], set: (v: string[]) => void, item: string) {
+    set(arr.includes(item) ? arr.filter((e) => e !== item) : [...arr, item]);
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!displayName.trim()) { setError("Display name is required"); return; }
     setError("");
-
     startTransition(async () => {
       try {
         await createSommelierProfile({ displayName: displayName.trim(), bio: bio.trim() || undefined, expertise, certifications });
         router.push("/sommeliers");
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to create profile");
-      }
+      } catch (err) { setError(err instanceof Error ? err.message : "Failed to create profile"); }
     });
   }
 

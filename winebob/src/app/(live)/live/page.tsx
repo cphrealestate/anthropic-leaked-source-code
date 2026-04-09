@@ -151,7 +151,6 @@ export default async function LiveEventsPage() {
           <div className="bg-white rounded-[14px] border border-card-border/60 overflow-hidden divide-y divide-card-border/30">
             {upcoming.map((event) => {
               const date = new Date(event.scheduledAt);
-              const dateStr = date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
               const timeStr = date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
               const countdown = getRelativeTime(date);
               const diff = DIFF_BADGE[event.difficulty] || DIFF_BADGE.intermediate;
@@ -190,6 +189,12 @@ export default async function LiveEventsPage() {
                       <span className="text-[11px] font-medium text-muted">{event.sommelier.displayName}</span>
                       {event.sommelier.verified && <BadgeCheck className="h-3 w-3 text-cherry" />}
                     </div>
+                  </div>
+
+                  {/* Time + countdown */}
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-[12px] font-semibold text-foreground">{timeStr}</p>
+                    <p className="text-[10px] text-cherry font-semibold">{getRelativeTime(date)}</p>
                   </div>
                 </Link>
               );
