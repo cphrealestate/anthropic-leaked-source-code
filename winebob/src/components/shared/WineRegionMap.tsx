@@ -468,6 +468,19 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
         },
       });
 
+      // Separate point source for labels (prevents tile-boundary duplication)
+      m.addSource("showcase-labels", {
+        type: "geojson",
+        data: {
+          type: "FeatureCollection",
+          features: SHOWCASE_WINERIES.map((w) => ({
+            type: "Feature" as const,
+            properties: { id: w.id, name: w.name },
+            geometry: { type: "Point" as const, coordinates: w.center },
+          })),
+        },
+      });
+
       m.addLayer({
         id: "showcase-fill", type: "fill", source: "showcase-wineries",
         slot: "top",
@@ -488,15 +501,15 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
       } as mapboxgl.LayerSpecification);
 
       m.addLayer({
-        id: "showcase-label", type: "symbol", source: "showcase-wineries",
+        id: "showcase-label", type: "symbol", source: "showcase-labels",
         slot: "top",
         minzoom: 13,
         layout: {
           "text-field": "★ {name}",
           "text-font": ["DIN Pro Bold", "Arial Unicode MS Bold"],
           "text-size": ["interpolate", ["linear"], ["zoom"], 13, 11, 16, 16],
-          "text-offset": [0, -1.8],
           "text-anchor": "bottom",
+          "text-offset": [0, -2],
         },
         paint: {
           "text-color": "#C8A255",
@@ -504,6 +517,27 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
           "text-halo-width": 2,
         },
       } as mapboxgl.LayerSpecification);
+
+      // Click + hover handlers (must be inside addCustomLayers so layer exists)
+      m.on("mouseenter", "showcase-fill", () => { m.getCanvas().style.cursor = "pointer"; });
+      m.on("mouseleave", "showcase-fill", () => { m.getCanvas().style.cursor = ""; });
+      m.on("click", "showcase-fill", (e) => {
+        if (!e.features?.length) return;
+        const id = e.features[0].properties?.id;
+        if (id && onShowcaseClickRef.current) {
+          onShowcaseClickRef.current(id);
+          const winery = SHOWCASE_WINERIES.find((w) => w.id === id);
+          if (winery) {
+            m.flyTo({
+              center: winery.center,
+              zoom: Math.max(m.getZoom(), 15),
+              pitch: 60,
+              bearing: -20,
+              duration: 1500,
+            });
+          }
+        }
+      });
     }
 
     // Restore region visibility state
@@ -791,27 +825,6 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
             .addTo(map.current!);
         });
       }
-
-      // ── Showcase winery click ──
-      map.current.on("mouseenter", "showcase-fill", () => { if (map.current) map.current.getCanvas().style.cursor = "pointer"; });
-      map.current.on("mouseleave", "showcase-fill", () => { if (map.current) map.current.getCanvas().style.cursor = ""; });
-      map.current.on("click", "showcase-fill", (e) => {
-        if (!map.current || !e.features?.length) return;
-        const id = e.features[0].properties?.id;
-        if (id && onShowcaseClickRef.current) {
-          onShowcaseClickRef.current(id);
-          const winery = SHOWCASE_WINERIES.find((w) => w.id === id);
-          if (winery) {
-            map.current.flyTo({
-              center: winery.center,
-              zoom: Math.max(map.current.getZoom(), 15),
-              pitch: 60,
-              bearing: -20,
-              duration: 1500,
-            });
-          }
-        }
-      });
 
       // ── POI interactions ──
       const poiLayers = ["poi-food", "poi-hotel", "poi-shops"];
