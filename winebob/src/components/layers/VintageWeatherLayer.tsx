@@ -317,13 +317,14 @@ export function VintageWeatherLayer({ active, mapRef, region, vintagePick, wines
     return () => clearTimeout(timer);
   }, [active, selectedYear]);
 
-  if (!active) return null;
-
   // Wines with a vintage year (for the picker)
+  // Must be above early returns to respect Rules of Hooks
   const vintageWines = React.useMemo(
     () => (wines ?? []).filter((w): w is RegionWineBasic & { vintage: number } => !!w.vintage && w.vintage >= 1990),
     [wines],
   );
+
+  if (!active) return null;
 
   // No region selected
   if (!region) {
