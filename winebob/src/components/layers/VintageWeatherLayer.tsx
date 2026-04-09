@@ -388,7 +388,8 @@ export function VintageWeatherLayer({ active, mapRef, region }: Props) {
       )}
 
       {/* ── Bottom controls container ── */}
-      <div className="absolute bottom-28 left-4 right-4 z-30 flex flex-col gap-2">
+      {/* right-16 leaves a gap for the MapLayerDrawer FAB button */}
+      <div className="absolute bottom-28 left-4 right-16 z-30 flex flex-col gap-2">
         {/* ── Timeline Scrubber ── */}
         {weatherData && (
           <div className="rounded-[10px] bg-[#1A1412]/85 backdrop-blur-xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.3)] px-3 py-2">
