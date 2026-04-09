@@ -341,71 +341,60 @@ async function scrapeWineryWines(page: Page, wineryQuery: string, maxWines: numb
   await page.screenshot({ path: join(debugDir, "debug-winery.png") }).catch(() => {});
   console.log(`  📸 Screenshot saved: scripts/output/debug-winery.png`);
 
-  // Get the base wine name from h1 (e.g., "Gaja Barbaresco DOCG")
+  // Check if we landed on a search results page or a wine page
   const h1 = await page.locator("h1").first().textContent().catch(() => null);
-  const baseWineName = h1?.replace(/^\d{4}\s*/, "").trim() || "";
-  console.log(`  🔗 Main wine: ${h1?.trim() || "–"}`);
+  const h1Text = h1?.trim() || "";
+  const isSearchResults = h1Text.toLowerCase().includes("showing results") || h1Text.toLowerCase().includes("search");
+  console.log(`  🔗 Page: ${h1Text || "–"} (${isSearchResults ? "search results" : "wine page"})`);
 
-  // Strategy 2: Collect vintage tabs — each year is a wine we can scrape
-  // Wine-Searcher shows: All, 2023, 2022, 2021, ... 2009
-  const allLinks = await page.locator("a").allTextContents().catch(() => [] as string[]);
-  for (const text of allLinks) {
-    const year = text.trim();
-    if (year.match(/^(19|20)\d{2}$/) && !seen.has(year)) {
-      seen.add(year);
-      if (baseWineName) {
-        wineNames.push(`${baseWineName} ${year}`);
+  if (isSearchResults) {
+    // We're on a search results page — scrape all wine cards from the results
+    console.log(`  📋 Parsing search results for wine names...`);
+
+    // Wine-Searcher search results show wine cards with links
+    // Look for all links that go to /find/ with actual wine names
+    const allLinks = await page.locator('a').all();
+    for (const link of allLinks) {
+      const text = (await link.textContent().catch(() => ""))?.trim() || "";
+      const href = (await link.getAttribute("href").catch(() => "")) || "";
+
+      // Wine result links contain the producer name and have /find/ URLs
+      const isWineLink = href.includes("/find/")
+        && text.length > 8 && text.length < 120
+        && !text.toLowerCase().includes("showing results")
+        && !text.toLowerCase().includes("search")
+        && !text.includes("Home") && !text.includes("Region")
+        && !text.includes("Grape") && !text.includes("See all")
+        && !text.includes("Find more") && !text.includes("Expand")
+        // Must contain the producer name or a vintage year
+        && (text.toLowerCase().includes(wineryQuery.toLowerCase())
+          || text.match(/\b(19|20)\d{2}\b/)
+          || href.toLowerCase().includes(wineryQuery.toLowerCase().replace(/ /g, "+")));
+
+      if (isWineLink && !seen.has(text)) {
+        seen.add(text);
+        wineNames.push(text);
       }
     }
-  }
-  if (wineNames.length > 0) {
-    console.log(`  📅 Found ${wineNames.length} vintages for "${baseWineName}"`);
-  }
+  } else {
+    // We're on a specific wine page — collect vintage tabs
+    const baseWineName = h1Text.replace(/^\d{4}\s*/, "").trim();
 
-  // Strategy 3: Look for "other wines" or related wines from the same producer
-  // Check for links that contain the producer name
-  const producerLower = wineryQuery.toLowerCase();
-  const findLinks = await page.locator('a[href*="/find/"]').all();
-  for (const link of findLinks) {
-    const text = (await link.textContent().catch(() => ""))?.trim() || "";
-    const href = (await link.getAttribute("href").catch(() => "")) || "";
-
-    // Must look like a wine name (not navigation)
-    if (text.length > 5 && text.length < 100
-      && (text.toLowerCase().includes(producerLower) || href.toLowerCase().includes(producerLower.replace(/ /g, "+")))
-      && !text.includes("Search") && !text.includes("Home")
-      && !text.includes("Region") && !text.includes("Grape")
-      && !text.includes("See all") && !text.includes("Find")
-      && !seen.has(text)) {
-      seen.add(text);
-      wineNames.push(text);
-    }
-  }
-
-  // Strategy 4: Try the merchant/winery page for a wine list
-  const merchantLink = await page.locator('a[href*="/merchant/"]').first().getAttribute("href").catch(() => null);
-  if (merchantLink) {
-    const wineryUrl = merchantLink.startsWith("http") ? merchantLink : `${WINE_SEARCHER_BASE}${merchantLink}`;
-    console.log(`  🏭 Checking winery page: ${wineryUrl}`);
-
-    try {
-      await page.goto(wineryUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
-      await delay(3000);
-
-      // Look for wine links on the winery page
-      const wineryLinks = await page.locator('a[href*="/find/"]').all();
-      for (const link of wineryLinks) {
-        const text = (await link.textContent().catch(() => ""))?.trim() || "";
-        if (text.length > 8 && text.length < 100
-          && !text.includes("Search") && !text.includes("Home")
-          && !text.includes("Region") && !text.includes("Grape")
-          && !seen.has(text)) {
-          seen.add(text);
-          wineNames.push(text);
+    if (baseWineName) {
+      // Add the current wine (without vintage filter)
+      if (!seen.has(baseWineName)) {
+        seen.add(baseWineName);
+        // Collect vintage years from tabs
+        const allLinks = await page.locator("a").allTextContents().catch(() => [] as string[]);
+        for (const text of allLinks) {
+          const year = text.trim();
+          if (year.match(/^(19|20)\d{2}$/) && !seen.has(year)) {
+            seen.add(year);
+            wineNames.push(`${baseWineName} ${year}`);
+          }
         }
+        console.log(`  📅 Found ${wineNames.length} vintages for "${baseWineName}"`);
       }
-    } catch {
-      console.log(`  ⚠ Could not load winery page`);
     }
   }
 
