@@ -65,6 +65,7 @@ export default function ExploreClient({ wineries, regionCounts }: Props) {
   const [satellite, setSatellite] = useState(false);
   const [activeTourStop, setActiveTourStop] = useState<TourStop | null>(null);
   const [regionDetail, setRegionDetail] = useState<RegionData | null>(null);
+  const [showRegionPanel, setShowRegionPanel] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [vintagePick, setVintagePick] = useState<VintagePick | null>(null);
 
@@ -86,8 +87,10 @@ export default function ExploreClient({ wineries, regionCounts }: Props) {
       try {
         const detail = await getRegionDetail(region);
         setRegionDetail(detail);
+        setShowRegionPanel(true);
       } catch {
         setRegionDetail(null);
+        setShowRegionPanel(false);
       }
     });
     // Track region exploration
@@ -112,6 +115,7 @@ export default function ExploreClient({ wineries, regionCounts }: Props) {
     setFlyToCoords(null);
     setTourRegion(null);
     setRegionDetail(null);
+    setShowRegionPanel(false);
   }
 
   function handleTour() {
@@ -238,7 +242,7 @@ export default function ExploreClient({ wineries, regionCounts }: Props) {
       )}
 
       {/* Region detail panel — right side */}
-      {selectedRegion && regionDetail && !isPending && (
+      {selectedRegion && regionDetail && !isPending && showRegionPanel && (
         <div className="absolute right-3 z-20" style={{ top: "12%" }}>
           <RegionDetailPanel
             region={selectedRegion}
@@ -248,7 +252,7 @@ export default function ExploreClient({ wineries, regionCounts }: Props) {
             wineries={regionDetail.wineries}
             wineCount={regionDetail.wineCount}
             producerCount={regionDetail.producerCount}
-            onClose={() => setRegionDetail(null)}
+            onClose={() => setShowRegionPanel(false)}
             onViewVintageWeather={(wine) => {
               setVintagePick({ wineName: wine.name, producer: wine.producer, vintage: wine.vintage });
               // Activate the vintage-weather layer if not already active
