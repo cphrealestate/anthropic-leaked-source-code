@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ChevronLeft, ChevronRight, X, MapPin, Star, Wine } from "lucide-react";
 import {
   SHOWCASE_WINERIES,
@@ -8,12 +8,6 @@ import {
   type ShowcaseWineryPage,
   type ShowcaseWine,
 } from "@/data/showcaseWineries";
-
-// ── Types ──
-
-type Props = {
-  mapRef: React.RefObject<mapboxgl.Map | null>;
-};
 
 // ── Utility ──
 
