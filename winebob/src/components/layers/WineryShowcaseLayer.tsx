@@ -243,18 +243,104 @@ function WineCard({ wine }: { wine: ShowcaseWine }) {
   );
 }
 
+// ── Fan-Out Context Menu ──
+
+function FanMenu({
+  winery,
+  onSelect,
+  onClose,
+}: {
+  winery: ShowcaseWinery;
+  onSelect: (action: "estate" | "wines" | "experience") => void;
+  onClose: () => void;
+}) {
+  const items = [
+    { key: "estate" as const, icon: <Star className="h-4 w-4" />, label: "Estate Tour", color: "#C8A255" },
+    { key: "wines" as const, icon: <Wine className="h-4 w-4" />, label: "View Wines", color: "#8B1A2B" },
+    { key: "experience" as const, icon: <MapPin className="h-4 w-4" />, label: "Book Tasting", color: "#74070E" },
+  ];
+
+  // Fan angles: -45°, 0°, 45° (spread upward)
+  const angles = [-50, 0, 50];
+  const radius = 80;
+
+  return (
+    <div className="absolute inset-0 z-40" onClick={onClose}>
+      <div
+        className="absolute"
+        style={{ left: "50%", top: "45%", transform: "translate(-50%, -50%)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Center label */}
+        <div className="absolute -translate-x-1/2 -translate-y-1/2 px-3 py-1.5 rounded-full bg-[#1A1412]/90 backdrop-blur-xl border border-[#C8A255]/30 whitespace-nowrap z-10">
+          <p className="text-[11px] font-bold text-[#C8A255]">★ {winery.name}</p>
+        </div>
+
+        {/* Fan items */}
+        {items.map((item, i) => {
+          const angle = (angles[i] - 90) * (Math.PI / 180); // -90 to point upward
+          const x = Math.cos(angle) * radius;
+          const y = Math.sin(angle) * radius;
+          return (
+            <button
+              key={item.key}
+              onClick={() => onSelect(item.key)}
+              className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1 transition-all duration-300 hover:scale-110 group"
+              style={{
+                left: x,
+                top: y,
+                animation: `fanIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) ${i * 0.05}s both`,
+              }}
+            >
+              <div
+                className="w-11 h-11 rounded-full flex items-center justify-center shadow-lg border-2 transition-colors"
+                style={{
+                  backgroundColor: `${item.color}20`,
+                  borderColor: item.color,
+                  color: item.color,
+                }}
+              >
+                {item.icon}
+              </div>
+              <span
+                className="text-[9px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap"
+                style={{
+                  backgroundColor: "rgba(26,20,18,0.85)",
+                  color: item.color,
+                }}
+              >
+                {item.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Layer Component ──
-// Layers are added by WineRegionMap. This component only renders the card UI.
+// Layers are added by WineRegionMap. This component only renders the UI.
 
 type Props = {
   selectedId: string | null;
+  view: "fan" | "estate" | null;
+  onSelectAction: (action: "estate" | "wines" | "experience") => void;
   onClose: () => void;
 };
 
-export function WineryShowcaseLayer({ selectedId, onClose }: Props) {
+export function WineryShowcaseLayer({ selectedId, view, onSelectAction, onClose }: Props) {
   const winery = selectedId ? SHOWCASE_WINERIES.find((w) => w.id === selectedId) ?? null : null;
 
   if (!winery) return null;
 
-  return <ShowcaseCard winery={winery} onClose={onClose} />;
+  if (view === "fan") {
+    return <FanMenu winery={winery} onSelect={onSelectAction} onClose={onClose} />;
+  }
+
+  if (view === "estate") {
+    return <ShowcaseCard winery={winery} onClose={onClose} />;
+  }
+
+  return null;
 }
