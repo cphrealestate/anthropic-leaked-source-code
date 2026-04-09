@@ -197,8 +197,8 @@ type WineRegionMapProps = {
   mapRef?: React.RefObject<mapboxgl.Map | null>;
   /** Winery data for map markers — falls back to mockWineries if not provided */
   wineries?: MockWinery[];
-  /** Called when a showcase winery polygon is clicked */
-  onShowcaseClick?: (wineryId: string) => void;
+  /** Called when a showcase winery is interacted with */
+  onShowcaseClick?: (wineryId: string, action: "showcase" | "winery" | "experience") => void;
 };
 
 const STYLE_STANDARD = "mapbox://styles/mapbox/standard";
@@ -525,17 +525,7 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
         if (!e.features?.length) return;
         const id = e.features[0].properties?.id;
         if (id && onShowcaseClickRef.current) {
-          onShowcaseClickRef.current(id);
-          const winery = SHOWCASE_WINERIES.find((w) => w.id === id);
-          if (winery) {
-            m.flyTo({
-              center: winery.center,
-              zoom: Math.max(m.getZoom(), 15),
-              pitch: 60,
-              bearing: -20,
-              duration: 1500,
-            });
-          }
+          onShowcaseClickRef.current(id, "showcase");
         }
       });
     }
@@ -771,14 +761,6 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
           if (!map.current || !e.features?.length) return;
           const p = e.features[0].properties as Record<string, any>;
 
-          // If this winery has a showcase entry, open the showcase card instead
-          const showcaseMatch = SHOWCASE_WINERIES.find((sw) => sw.slug === p.slug || sw.name === p.name);
-          if (showcaseMatch && onShowcaseClickRef.current) {
-            onShowcaseClickRef.current(showcaseMatch.id);
-            map.current.flyTo({ center: showcaseMatch.center, zoom: Math.max(map.current.getZoom(), 15), pitch: 60, bearing: -20, duration: 1500 });
-            return;
-          }
-
           const isFeatured = p.featured === true || p.featured === "true";
 
           let grapes: string[] = [];
@@ -930,17 +912,6 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
           map.current.on("click", "experiences-badge", (e) => {
             if (!map.current || !e.features?.length) return;
             const p = e.features[0].properties as Record<string, any>;
-
-            // If this experience is at a showcase winery, open showcase card instead
-            const showcaseMatch = SHOWCASE_WINERIES.find((sw) =>
-              sw.slug === p.winerySlug || sw.slug === p.slug ||
-              (p.wineryName && typeof p.wineryName === "string" && p.wineryName.includes(sw.name))
-            );
-            if (showcaseMatch && onShowcaseClickRef.current) {
-              onShowcaseClickRef.current(showcaseMatch.id);
-              map.current.flyTo({ center: showcaseMatch.center, zoom: Math.max(map.current.getZoom(), 15), pitch: 60, bearing: -20, duration: 1500 });
-              return;
-            }
 
             const typeLabels: Record<string, string> = {
               tasting: "🍷 Tasting", tour: "🚶 Tour", harvest: "🍇 Harvest",

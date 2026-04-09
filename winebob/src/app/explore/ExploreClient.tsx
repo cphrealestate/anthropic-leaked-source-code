@@ -71,9 +71,11 @@ export default function ExploreClient({ wineries, regionCounts }: Props) {
   const [isPending, startTransition] = useTransition();
   const [vintagePick, setVintagePick] = useState<VintagePick | null>(null);
   const [showcaseWineryId, setShowcaseWineryId] = useState<string | null>(null);
+  const [showcaseView, setShowcaseView] = useState<"fan" | "estate" | null>(null);
 
-  const handleShowcaseClick = useCallback((id: string) => {
+  const handleShowcaseClick = useCallback((id: string, _action: "showcase" | "winery" | "experience") => {
     setShowcaseWineryId(id);
+    setShowcaseView("fan");
   }, []);
 
   function handleCityClick(city: { name: string; coords: [number, number] }) {
@@ -175,7 +177,23 @@ export default function ExploreClient({ wineries, regionCounts }: Props) {
         active={isActive("draw-flight")}
         mapRef={mapRef}
       />
-      <WineryShowcaseLayer selectedId={showcaseWineryId} onClose={() => setShowcaseWineryId(null)} />
+      <WineryShowcaseLayer
+        selectedId={showcaseWineryId}
+        view={showcaseView}
+        onSelectAction={(action) => {
+          if (action === "estate") {
+            setShowcaseView("estate");
+          } else if (action === "wines") {
+            // Navigate to winery page
+            const w = SHOWCASE_WINERIES.find((sw) => sw.id === showcaseWineryId);
+            if (w) window.location.href = `/producers/${w.slug}`;
+          } else if (action === "experience") {
+            const w = SHOWCASE_WINERIES.find((sw) => sw.id === showcaseWineryId);
+            if (w) window.location.href = `/experiences?search=${encodeURIComponent(w.name)}`;
+          }
+        }}
+        onClose={() => { setShowcaseWineryId(null); setShowcaseView(null); }}
+      />
 
       {/* Top — branding + search + back */}
       <div className="absolute top-0 left-0 right-0 z-20 safe-top">
