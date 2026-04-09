@@ -197,6 +197,8 @@ type WineRegionMapProps = {
   mapRef?: React.RefObject<mapboxgl.Map | null>;
   /** Winery data for map markers — falls back to mockWineries if not provided */
   wineries?: MockWinery[];
+  /** Called when a showcase winery polygon is clicked */
+  onShowcaseClick?: (wineryId: string) => void;
 };
 
 const STYLE_STANDARD = "mapbox://styles/mapbox/standard";
@@ -221,7 +223,7 @@ export const REGION_CITIES: Record<string, [number, number]> = {
   "Marlborough": [173.95, -41.51], "Stellenbosch": [18.86, -33.93],
 };
 
-export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", className = "", exploreRegion, flyToCoords, tourRegion, onTourEnd, satellite = false, onTourStop, mapRef, wineries: wineriesProp }: WineRegionMapProps) {
+export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", className = "", exploreRegion, flyToCoords, tourRegion, onTourEnd, satellite = false, onTourStop, mapRef, wineries: wineriesProp, onShowcaseClick }: WineRegionMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const popup = useRef<mapboxgl.Popup | null>(null);
@@ -239,6 +241,8 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
   onTourEndRef.current = onTourEnd;
   const onTourStopRef = useRef(onTourStop);
   onTourStopRef.current = onTourStop;
+  const onShowcaseClickRef = useRef(onShowcaseClick);
+  onShowcaseClickRef.current = onShowcaseClick;
 
   // City hopping — only flyTo, don't touch region visibility
   useEffect(() => {
@@ -787,6 +791,27 @@ export function WineRegionMap({ onRegionClick, regionCounts, height = "100%", cl
             .addTo(map.current!);
         });
       }
+
+      // ── Showcase winery click ──
+      map.current.on("mouseenter", "showcase-fill", () => { if (map.current) map.current.getCanvas().style.cursor = "pointer"; });
+      map.current.on("mouseleave", "showcase-fill", () => { if (map.current) map.current.getCanvas().style.cursor = ""; });
+      map.current.on("click", "showcase-fill", (e) => {
+        if (!map.current || !e.features?.length) return;
+        const id = e.features[0].properties?.id;
+        if (id && onShowcaseClickRef.current) {
+          onShowcaseClickRef.current(id);
+          const winery = SHOWCASE_WINERIES.find((w) => w.id === id);
+          if (winery) {
+            map.current.flyTo({
+              center: winery.center,
+              zoom: Math.max(map.current.getZoom(), 15),
+              pitch: 60,
+              bearing: -20,
+              duration: 1500,
+            });
+          }
+        }
+      });
 
       // ── POI interactions ──
       const poiLayers = ["poi-food", "poi-hotel", "poi-shops"];
